@@ -758,10 +758,12 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
       });
 
       // 7. Render Sand Drawings & Collision Logic
-      const renderDrawing = (pointsList: DrawPoint[], scaleX = w, scaleY = h) => {
+      const sizeRef = Math.min(w, h);
+      const renderDrawing = (pointsList: DrawPoint[]) => {
         pointsList.forEach((pt) => {
-          const px = pt.x * scaleX;
-          const py = pt.y * scaleY;
+          // Adjust scaling to keep proportions and centering on phone screens
+          const px = w * 0.5 + (pt.x - 0.5) * sizeRef * 1.15;
+          const py = h * 0.785 + (pt.y - 0.785) * sizeRef * 1.15;
 
           // Wave collision logic
           const localWaveOffset = Math.sin((px / w) * Math.PI * 6 + waveCycleRef.current * 2) * 8;
@@ -857,8 +859,8 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
         ctx.globalAlpha = itemProgress * sandOceanAlpha;
 
         // Draw Starfish
-        const starX = w * 0.61;
-        const starY = h * 0.835;
+        const starX = w * 0.5 + 0.11 * sizeRef * 1.15;
+        const starY = h * 0.785 + 0.05 * sizeRef * 1.15;
         ctx.save();
         ctx.translate(starX, starY);
         ctx.rotate(0.25);
@@ -877,8 +879,8 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
         ctx.restore();
 
         // Draw Seashell
-        const shellX = w * 0.39;
-        const shellY = h * 0.85;
+        const shellX = w * 0.5 - 0.11 * sizeRef * 1.15;
+        const shellY = h * 0.785 + 0.065 * sizeRef * 1.15;
         ctx.save();
         ctx.translate(shellX, shellY);
         ctx.rotate(-0.35);
@@ -1065,7 +1067,7 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.8 }}
-      className="relative min-h-screen w-full overflow-hidden flex flex-col justify-between items-center text-slate-100 font-sans select-none"
+      className="relative min-h-[100dvh] w-full overflow-hidden flex flex-col justify-between items-center text-slate-100 font-sans select-none"
     >
       {/* Canvas rendering beach sunset and waves */}
       <canvas
@@ -1134,7 +1136,7 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
       </AnimatePresence>
 
       {/* Main Content Layout */}
-      <div className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 py-16 w-full max-w-xl text-center">
+      <div className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-16 w-full max-w-xl text-center">
         
         {/* Cinematic Title & Custom Letter Reveal Stage */}
         <AnimatePresence>
