@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -203,19 +203,35 @@ export default function WelcomePage() {
           I made something special just for you...
         </motion.p>
 
-        <motion.button
-          onClick={() => router.push("/quiz")}
-          className="relative group px-10 py-4 font-bold text-lg text-white bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full overflow-hidden shadow-xl hover:shadow-[0_0_25px_rgba(236,72,153,0.5)] transition-all duration-300 transform hover:scale-105 active:scale-95 z-30"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          whileHover={{ y: -2 }}
-        >
-          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 group-hover:via-pink-500 group-hover:to-purple-600 transition-colors duration-500" />
-          <span className="relative flex items-center justify-center gap-2">
-            Start 💌
-          </span>
-        </motion.button>
+        <div className="flex flex-col gap-4 w-full z-30">
+          <motion.button
+            onClick={() => router.push("/quiz")}
+            className="w-full relative group px-10 py-4 font-bold text-lg text-white bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full overflow-hidden shadow-xl hover:shadow-[0_0_25px_rgba(236,72,153,0.4)] transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
+            whileHover={{ y: -2 }}
+          >
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 group-hover:via-pink-500 group-hover:to-purple-600 transition-colors duration-500" />
+            <span className="relative flex items-center justify-center gap-2">
+              Start 💌
+            </span>
+          </motion.button>
+
+          <motion.button
+            onClick={() => router.push("/surprises")}
+            className="w-full relative group px-10 py-4 font-bold text-lg text-white bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-full overflow-hidden shadow-xl hover:shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.4 }}
+            whileHover={{ y: -2 }}
+          >
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 group-hover:via-purple-500 group-hover:to-pink-600 transition-colors duration-500" />
+            <span className="relative flex items-center justify-center gap-2">
+              Check Surprises 🎁
+            </span>
+          </motion.button>
+        </div>
       </motion.div>
     </div>
   );

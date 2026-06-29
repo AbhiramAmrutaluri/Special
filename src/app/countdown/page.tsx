@@ -3,12 +3,30 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Gift, Sparkles } from "lucide-react";
+
+const TARGET_DATE = new Date("July 4, 2026 00:00:00").getTime();
+
+function TimeUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <motion.div
+      className="flex flex-col items-center justify-center bg-white/20 backdrop-blur-3xl border border-white/60 p-4 md:p-8 rounded-[2rem] w-24 md:w-40 shadow-[0_10px_40px_rgba(244,63,94,0.1)]"
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+    >
+      <span className="text-4xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-purple-600 drop-shadow-md">
+        {value.toString().padStart(2, "0")}
+      </span>
+      <span className="text-xs md:text-lg font-bold text-gray-700 uppercase tracking-widest mt-2 opacity-80">
+        {label}
+      </span>
+    </motion.div>
+  );
+}
 
 export default function CountdownPage() {
   const router = useRouter();
-  
-  // Target date: July 4th
-  const TARGET_DATE = new Date("July 4, 2026 00:00:00").getTime();
 
   const [timeLeft, setTimeLeft] = useState({
     months: 0,
@@ -42,22 +60,6 @@ export default function CountdownPage() {
 
     return () => clearInterval(timer);
   }, []);
-
-  const TimeUnit = ({ value, label }: { value: number, label: string }) => (
-    <motion.div 
-      className="flex flex-col items-center justify-center bg-white/20 backdrop-blur-3xl border border-white/60 p-4 md:p-8 rounded-[2rem] w-24 md:w-40 shadow-[0_10px_40px_rgba(244,63,94,0.1)]"
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-    >
-      <span className="text-4xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-purple-600 drop-shadow-md">
-        {value.toString().padStart(2, '0')}
-      </span>
-      <span className="text-xs md:text-lg font-bold text-gray-700 uppercase tracking-widest mt-2 opacity-80">
-        {label}
-      </span>
-    </motion.div>
-  );
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-[#faf8f9] selection:bg-pink-300 selection:text-white p-6 overflow-hidden">
@@ -104,16 +106,31 @@ export default function CountdownPage() {
           </div>
         )}
 
-        <motion.button
-          onClick={() => router.push("/message")}
-          className="px-8 py-3 font-bold text-pink-600 bg-white/60 backdrop-blur-md rounded-full border border-pink-200 shadow-lg hover:shadow-xl hover:bg-white transition-all active:scale-95"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.5 }}
-          whileHover={{ y: -2 }}
-        >
-          &larr; Go Back
-        </motion.button>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <motion.button
+            onClick={() => router.push("/unlock")}
+            className="inline-flex items-center gap-2 px-8 py-3 font-bold text-white bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500 rounded-full shadow-xl shadow-pink-500/20 border border-white/50 hover:shadow-2xl hover:shadow-pink-500/30 transition-all active:scale-95"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.35 }}
+            whileHover={{ y: -2 }}
+          >
+            <Gift className="h-4 w-4" />
+            Check Surprise
+            <Sparkles className="h-4 w-4" />
+          </motion.button>
+
+          <motion.button
+            onClick={() => router.push("/message")}
+            className="px-8 py-3 font-bold text-pink-600 bg-white/60 backdrop-blur-md rounded-full border border-pink-200 shadow-lg hover:shadow-xl hover:bg-white transition-all active:scale-95"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.5 }}
+            whileHover={{ y: -2 }}
+          >
+            &larr; Go Back
+          </motion.button>
+        </div>
       </motion.div>
     </div>
   );

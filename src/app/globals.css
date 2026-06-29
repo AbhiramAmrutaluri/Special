@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+nextjs-portal, 
+#__next-prerender-indicator, 
+.__next-custom-shared-gip-indicator {
+  display: none !important;
+}
