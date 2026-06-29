@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Heart, Sparkles, ArrowLeft } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
@@ -49,6 +49,18 @@ const BackgroundBlobs = () => (
 
 export default function SurprisesPage() {
   const router = useRouter();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handleLockedClick = () => {
+    setToastMessage("Wait until the time arrives 🔒");
+  };
 
   // Floating background elements
   const floatingHearts = useMemo(() => {
@@ -192,9 +204,66 @@ export default function SurprisesPage() {
               <span className="text-xl font-black text-rose-900">Day 4 Surprise</span>
             </div>
           </motion.button>
+
+          {/* Day 3 Card (Locked) */}
+          <motion.button
+            onClick={handleLockedClick}
+            className="flex-1 rounded-[2rem] border border-white/40 bg-white/15 opacity-75 hover:opacity-90 p-6 shadow-[0_12px_30px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 text-rose-950 font-bold flex flex-col items-center gap-3 cursor-pointer group"
+            whileHover={{ y: -4, boxShadow: "0px 20px 40px rgba(0,0,0,0.08)" }}
+          >
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-200/80 to-slate-300/80 text-slate-500 group-hover:scale-110 transition duration-300 shadow-sm border border-white/40">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-black text-rose-900/60">Day 3 Surprise</span>
+            </div>
+          </motion.button>
+
+          {/* Day 2 Card (Locked) */}
+          <motion.button
+            onClick={handleLockedClick}
+            className="flex-1 rounded-[2rem] border border-white/40 bg-white/15 opacity-75 hover:opacity-90 p-6 shadow-[0_12px_30px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 text-rose-950 font-bold flex flex-col items-center gap-3 cursor-pointer group"
+            whileHover={{ y: -4, boxShadow: "0px 20px 40px rgba(0,0,0,0.08)" }}
+          >
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-200/80 to-slate-300/80 text-slate-500 group-hover:scale-110 transition duration-300 shadow-sm border border-white/40">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-black text-rose-900/60">Day 2 Surprise</span>
+            </div>
+          </motion.button>
+
+          {/* Day 1 Card (Locked) */}
+          <motion.button
+            onClick={handleLockedClick}
+            className="flex-1 rounded-[2rem] border border-white/40 bg-white/15 opacity-75 hover:opacity-90 p-6 shadow-[0_12px_30px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 text-rose-950 font-bold flex flex-col items-center gap-3 cursor-pointer group"
+            whileHover={{ y: -4, boxShadow: "0px 20px 40px rgba(0,0,0,0.08)" }}
+          >
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-200/80 to-slate-300/80 text-slate-500 group-hover:scale-110 transition duration-300 shadow-sm border border-white/40">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-black text-rose-900/60">Day 1 Surprise</span>
+            </div>
+          </motion.button>
           
         </div>
       </motion.div>
+
+      {/* Floating Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, scale: 0.9, x: "-50%" }}
+            className="fixed bottom-8 left-1/2 z-50 rounded-[1.5rem] border border-rose-200/60 bg-white/95 px-6 py-3.5 shadow-2xl backdrop-blur-md flex items-center gap-2 text-rose-900 font-bold"
+          >
+            <span className="text-xl">🔒</span>
+            <span className={`${caveat.className} text-xl md:text-2xl`}>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
