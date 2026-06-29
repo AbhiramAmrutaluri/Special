@@ -92,7 +92,7 @@ export default function SurprisesPage() {
 
       {/* Main glass card */}
       <motion.div
-        className="z-10 flex flex-col items-center max-w-xl w-full p-8 md:p-12 rounded-[2.5rem] bg-white/20 backdrop-blur-xl shadow-[0_20px_50px_rgba(236,72,153,0.1)] border border-white/55 text-center gap-6"
+        className="z-10 flex flex-col items-center max-w-4xl w-full p-8 md:p-12 rounded-[2.5rem] bg-white/20 backdrop-blur-xl shadow-[0_20px_50px_rgba(236,72,153,0.1)] border border-white/55 text-center gap-6"
         initial={{ opacity: 0, scale: 0.92, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -107,7 +107,7 @@ export default function SurprisesPage() {
         </div>
 
         {/* Days selection list */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-6 w-full justify-center mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full justify-center mt-4">
           
           {/* Day 9 Card */}
           <motion.button
