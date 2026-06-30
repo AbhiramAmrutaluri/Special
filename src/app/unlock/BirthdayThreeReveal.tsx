@@ -891,7 +891,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.lineTo(bx + 20, by - 6);
       ctx.stroke();
 
-      // 8. Pine trees
+      // 8. Pine trees (with soft wind sway bend animation)
       const pineTrees = [
         { nx: 0.28, ny: 0.44 }, { nx: 0.32, ny: 0.48 }, { nx: 0.35, ny: 0.41 },
         { nx: 0.65, ny: 0.46 }, { nx: 0.69, ny: 0.41 }, { nx: 0.72, ny: 0.50 },
@@ -902,8 +902,12 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       pineTrees.forEach(tree => {
         const tx = toScreenX(tree.nx);
         const ty = toScreenY(tree.ny);
+        
+        // Bends the tree tip in a soft wind sway
+        const windSway = Math.sin(tNow * 0.0016 + tree.nx * 20) * 1.6;
+        
         ctx.beginPath();
-        ctx.moveTo(tx, ty - 18);
+        ctx.moveTo(tx + windSway, ty - 18);
         ctx.lineTo(tx - 6, ty - 2);
         ctx.lineTo(tx + 6, ty - 2);
         ctx.closePath();
