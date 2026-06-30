@@ -12,6 +12,7 @@ import BirthdaySevenReveal from "./BirthdaySevenReveal";
 import BirthdaySixReveal from "./BirthdaySixReveal";
 import BirthdayFiveReveal from "./BirthdayFiveReveal";
 import BirthdayFourReveal from "./BirthdayFourReveal";
+import BirthdayThreeReveal from "./BirthdayThreeReveal";
 
 const caveat = Caveat({
   subsets: ["latin"],
@@ -577,7 +578,8 @@ export default function UnlockPage() {
   const [showSixSurprise, setShowSixSurprise] = useState(false);
   const [showFiveSurprise, setShowFiveSurprise] = useState(false);
   const [showFourSurprise, setShowFourSurprise] = useState(false);
-  const showConfetti = isRevealed && !showSurprise && !showSevenSurprise && !showSixSurprise && !showFiveSurprise && !showFourSurprise;
+  const [showThreeSurprise, setShowThreeSurprise] = useState(false);
+  const showConfetti = isRevealed && !showSurprise && !showSevenSurprise && !showSixSurprise && !showFiveSurprise && !showFourSurprise && !showThreeSurprise;
 
   useEffect(() => {
     if (!isRevealed) return;
@@ -615,8 +617,25 @@ export default function UnlockPage() {
       setIsRevealed(true);
       setShowCollage(true);
       setShowFourSurprise(true);
+    } else if (day === "3") {
+      setIsRevealed(true);
+      setShowCollage(true);
+      setShowThreeSurprise(true);
     }
   }, []);
+
+  if (showThreeSurprise) {
+    return (
+      <AnimatePresence mode="wait">
+        <BirthdayThreeReveal
+          onClose={() => {
+            setShowThreeSurprise(false);
+            router.push("/surprises");
+          }}
+        />
+      </AnimatePresence>
+    );
+  }
 
   if (showFourSurprise) {
     return (
@@ -843,6 +862,9 @@ export default function UnlockPage() {
         )}
         {showFourSurprise && (
           <BirthdayFourReveal onClose={() => setShowFourSurprise(false)} />
+        )}
+        {showThreeSurprise && (
+          <BirthdayThreeReveal onClose={() => setShowThreeSurprise(false)} />
         )}
       </AnimatePresence>
     </div>

@@ -1052,6 +1052,31 @@ export default function BirthdayFourReveal({ onClose }: BirthdayFourRevealProps)
   }, [triggerReplay]);
 
   // Handler to dissolve letter modal into stars
+  const dissolveLetter = () => {
+    const particles: LetterParticle[] = [];
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    
+    // Spawn 150 particles around center of screen
+    for (let i = 0; i < 150; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 3.5;
+      
+      particles.push({
+        x: w * 0.5 + (Math.random() - 0.5) * w * 0.3,
+        y: h * 0.45 + (Math.random() - 0.5) * h * 0.2,
+        vx: Math.cos(angle) * speed,
+        vy: -0.5 - Math.random() * 2.0,
+        size: 1.0 + Math.random() * 3.0,
+        alpha: 1.0,
+        color: i % 2 === 0 ? "rgba(254, 243, 199, 1.0)" : "rgba(253, 230, 138, 1.0)",
+        isStar: false,
+        starTwinklePhase: Math.random() * Math.PI * 2,
+      });
+    }
+    letterParticlesRef.current = particles;
+  };
+
   const handleCloseLetter = () => {
     setLetterOpen(false);
     dissolveLetter();
