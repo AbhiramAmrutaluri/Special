@@ -16,16 +16,16 @@ const caveat = Caveat({
 });
 
 // Custom secret message
-const SECRET_MESSAGE = `My Dearest Mammoty, ❤️
+const SECRET_MESSAGE = `My Dearest Vedhaa garuuu, ❤️
 
 They say that when a whole village lights up, it's to guide a wanderer back home. But tonight, this entire village has secretly come together, lighting every candle, street lamp, and fireplace, just to celebrate you. 
 
-No matter where we go or how many lights shine in the night sky, you will always be my brightest star, my anchor, and my absolute favorite person. You deserve all the warmth, love, and magic in the universe.
+No matter where we go or how many lights shine in the night sky, you will always be my brightest star, my , and my absolute favorite person. You deserve all the warmth, love....
 
 Only 3 more days until the world celebrates the day you were born... 🏰✨
 
 Forever and always,
-Your Special Person ❤️`;
+Your Abhiiii ❤️`;
 
 // Web Audio API Sound Synthesizer
 class MountainVillageSynth {
@@ -58,7 +58,7 @@ class MountainVillageSynth {
     this.activeNodes.forEach(node => {
       try {
         (node as any).stop?.();
-      } catch (e) {}
+      } catch (e) { }
     });
     this.activeNodes = [];
     if (this.timer) {
@@ -130,11 +130,11 @@ class MountainVillageSynth {
   playChurchBells() {
     if (!this.ctx || this.isMuted) return;
     const now = this.ctx.currentTime;
-    
+
     for (let toll = 0; toll < 3; toll++) {
       const startTime = now + toll * 2.2;
       const baseFreq = 164.81; // E3 note
-      
+
       const partials = [
         { ratio: 1.0, vol: 0.30 },
         { ratio: 2.0, vol: 0.15 },
@@ -147,7 +147,7 @@ class MountainVillageSynth {
       partials.forEach(partial => {
         const osc = this.ctx!.createOscillator();
         const gainNode = this.ctx!.createGain();
-        
+
         osc.type = "sine";
         osc.frequency.value = baseFreq * partial.ratio;
 
@@ -314,7 +314,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const synthRef = useRef<MountainVillageSynth | null>(null);
   const phaseRef = useRef<Phase>("opening");
-  
+
   // Drone camera rig
   const cameraRef = useRef({
     x: 0,
@@ -331,7 +331,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
   const firefliesRef = useRef<Firefly[]>([]);
   const sparklesRef = useRef<FloatingSparkle[]>([]);
   const fireworksRef = useRef<Firework[]>([]);
-  
+
   // Real Village Static Layout
   const staticHousesRef = useRef<StaticHouse[]>([]);
   // Synchronized Light Show Bulbs
@@ -441,7 +441,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     // 5. Generate Real Static Houses (Natural cluster streets layout)
     const houses: StaticHouse[] = [];
     let lightId = 0;
-    
+
     // Winding street paths to structure buildings realistically
     const street1Y = (x: number) => 0.54 + 0.06 * Math.sin((x - 0.2) * 5);
     const street2Y = (x: number) => 0.72 + 0.04 * Math.sin(x * 6);
@@ -489,7 +489,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           isBrightest: false,
         });
       }
-      
+
       // Row 2 street
       houses.push({
         id: houseIdCounter++,
@@ -551,7 +551,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     // A. Add Window Lights for each house
     houses.forEach(house => {
       const isBr = house.isBrightest;
-      
+
       if (house.type === "church") {
         // Stained glass center window
         lights.push({
@@ -892,6 +892,12 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     }, 62000);
   };
 
+  const handleSkip = () => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+    setPhase("interactive_chest");
+  };
+
   useEffect(() => {
     initializeEntities();
     runSequenceTimeline();
@@ -1155,7 +1161,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         const tx = toScreenX(tree.nx);
         const ty = toScreenY(tree.ny);
         const windSway = Math.sin(tNow * 0.0016 + tree.nx * 20) * 1.5;
-        
+
         ctx.beginPath();
         ctx.moveTo(tx + windSway, ty - 18);
         ctx.lineTo(tx - 6, ty - 2);
@@ -1180,7 +1186,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.rect(-hSize * 0.5, -hSize * 0.5, hSize, hSize);
           ctx.rect(-hSize * 0.22, -hSize * 1.5, hSize * 0.44, hSize);
           ctx.fill();
-          
+
           // Church steeple roof
           ctx.fillStyle = house.roofColor;
           ctx.beginPath();
@@ -1199,7 +1205,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.moveTo(-hSize * 0.10, -hSize * 2.44);
           ctx.lineTo(hSize * 0.10, -hSize * 2.44);
           ctx.stroke();
-        } 
+        }
         else {
           // Standard house silhouette walls
           ctx.fillStyle = house.wallColor;
@@ -1335,7 +1341,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             ctx.lineTo(-lSize * light.currentLight, lSize * 0.8);
             ctx.closePath();
             ctx.fill();
-          } 
+          }
           else if (light.type === "streetlamp" || light.type === "bridge") {
             // Lamp post bulbs with high glow bloom
             ctx.shadowBlur = 15 * light.currentLight;
@@ -1351,14 +1357,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             ctx.beginPath();
             ctx.arc(0, 0, lSize * 0.35, 0, Math.PI * 2);
             ctx.fill();
-          } 
+          }
           else if (light.type === "window") {
             // House windows
             ctx.shadowBlur = 9 * light.currentLight;
             ctx.shadowColor = light.isBrightest ? "rgba(249, 115, 22, 0.9)" : "rgba(251, 191, 36, 0.95)";
             ctx.fillStyle = light.isBrightest ? `rgba(249, 115, 22, ${light.currentLight})` : `rgba(251, 191, 36, ${light.currentLight})`;
             ctx.fillRect(-lSize * 0.5, -lSize * 0.5, lSize, lSize);
-          } 
+          }
           else if (light.type === "fairy" || light.type === "garden") {
             // Little fairy light dots
             ctx.shadowBlur = 8 * light.currentLight;
@@ -1379,7 +1385,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         f.y += f.vy;
         f.vx += (Math.random() - 0.5) * 0.00012;
         f.vy += (Math.random() - 0.5) * 0.00012;
-        
+
         if (f.x < 0) f.x = 1.0;
         if (f.x > 1.0) f.x = 0;
         if (f.y < 0.3) f.y = 0.95;
@@ -1501,7 +1507,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     for (let i = 0; i < 180; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.5 + Math.random() * 2.8;
-      
+
       list.push({
         x: 0.5 + (Math.random() - 0.5) * 0.08,
         y: 0.45 + (Math.random() - 0.5) * 0.12,
@@ -1525,9 +1531,26 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-center items-center overflow-hidden bg-black text-amber-50 select-none">
-      
+
       {/* Cinematic background canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full pointer-events-none z-0" />
+
+      {/* Skip Intro Option */}
+      <AnimatePresence>
+        {isPlaying && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.65 }}
+            exit={{ opacity: 0 }}
+            whileHover={{ opacity: 1.0, scale: 1.05 }}
+            onClick={handleSkip}
+            className="absolute top-6 right-6 z-50 rounded-full border border-white/20 bg-black/40 hover:bg-white/10 px-4 py-2 text-xs font-semibold text-white/95 backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <span>Skip Intro</span>
+            <span>⏭️</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Audio initialization hint overlay */}
       <AnimatePresence>
@@ -1548,30 +1571,30 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       <AnimatePresence>
         {isPlaying && (
           <div className="absolute inset-x-8 top-[30%] pointer-events-none z-30 flex flex-col items-center text-center select-none">
-            
+
             {phase === "opening" && (
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                transition={{ duration: 1.5, ease: "easeOut" }} 
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
                 className="max-w-2xl"
               >
                 <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>
                   Tonight...
                 </h2>
                 <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>
-                  an entire village has a surprise<br/>for someone truly special... ❤️
+                  an entire village has a surprise<br />for someone truly special... ❤️
                 </h3>
               </motion.div>
             )}
 
             {phase === "final_reveal" && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }} 
-                animate={{ opacity: 1, scale: 1 }} 
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }} 
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 className="p-8 rounded-[2rem] border border-white/10 bg-black/40 backdrop-blur-[2px] shadow-2xl max-w-xl"
               >
                 <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">✨❤️</span>
@@ -1579,25 +1602,25 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                   3 DAYS TO GO
                 </h1>
                 <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse mt-2">❤️✨</span>
-                
+
                 <p className={`${caveat.className} mt-4 text-2.2xl font-bold leading-relaxed text-amber-200/90 md:text-3xl`}>
-                  "An entire village lit up...<br/>
-                  just to celebrate the countdown<br/>
+                  "An entire village lit up...<br />
+                  just to celebrate the countdown<br />
                   to my Mammoty's birthday. ❤️"
                 </p>
               </motion.div>
             )}
 
             {phase === "scene9_quote" && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.8, ease: "easeOut", delay: 0.8 }} 
+                transition={{ duration: 1.8, ease: "easeOut", delay: 0.8 }}
                 className="max-w-lg p-5"
               >
                 <p className={`${caveat.className} text-3.2xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.95)]`}>
-                  "No matter how many lights shine tonight...<br/>
+                  "No matter how many lights shine tonight...<br />
                   you'll always be the brightest one. ❤️"
                 </p>
               </motion.div>
@@ -1616,11 +1639,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-40 bg-black/90 flex flex-col justify-center items-center gap-10"
           >
-            
+
             {/* Wooden chest surprise container */}
             {!chestOpened ? (
               <div className="flex flex-col items-center gap-6">
-                <motion.div 
+                <motion.div
                   className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
                   animate={{ y: [0, -6, 0] }}
                   transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
@@ -1660,7 +1683,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                     <div className="relative flex items-center justify-center h-48 w-48">
                       <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
                       <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
-                      
+
                       <motion.div
                         animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
                         transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
@@ -1752,7 +1775,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                 <RefreshCw size={16} />
                 <span>Replay Cinematic</span>
               </button>
-              
+
               <button
                 onClick={onClose}
                 className="flex-1 flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-black/65 hover:bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition cursor-pointer"
