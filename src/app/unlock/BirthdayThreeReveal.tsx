@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Heart, Sparkles, Volume2, VolumeX, ArrowLeft, RefreshCw } from "lucide-react";
+import { Sparkles, ArrowLeft, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Playfair_Display, Caveat } from "next/font/google";
 
@@ -82,9 +82,7 @@ class MountainVillageSynth {
     filter.Q.value = 1.0;
 
     gainNode.gain.setValueAtTime(0, startTime);
-    // Smooth fade in
     gainNode.gain.linearRampToValueAtTime(gainValue * 0.15, startTime + 1.5);
-    // Smooth fade out
     gainNode.gain.setValueAtTime(gainValue * 0.15, startTime + duration - 2.0);
     gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
 
@@ -101,7 +99,7 @@ class MountainVillageSynth {
   private startAmbientProgression() {
     if (!this.ctx || this.isMuted) return;
 
-    // Cinematic chords progression: Cmaj9, Gsus4, Am9, Fmaj7
+    // Cinematic chords: Cmaj9, Gsus4, Am9, Fmaj7
     const chords = [
       [130.81, 196.00, 261.63, 329.63, 392.00, 493.88], // Cmaj9
       [146.83, 220.00, 293.66, 392.00, 440.00, 587.33], // Gsus4
@@ -129,12 +127,10 @@ class MountainVillageSynth {
     playNext();
   }
 
-  // Synthesize soft, resonant church bell tolls
   playChurchBells() {
     if (!this.ctx || this.isMuted) return;
     const now = this.ctx.currentTime;
     
-    // Play 3 bell chimes staggered by 2.2 seconds
     for (let toll = 0; toll < 3; toll++) {
       const startTime = now + toll * 2.2;
       const baseFreq = 164.81; // E3 note
@@ -212,18 +208,32 @@ type Phase =
   | "scene10_fade_moon"
   | "interactive_chest";
 
-interface House {
+interface StaticHouse {
   id: number;
   nx: number;
   ny: number;
+  type: "house" | "cottage" | "church";
+  sizeMultiplier: number;
+  wallColor: string;
+  roofColor: string;
+  isBrightest: boolean;
+}
+
+interface VillageLight {
+  id: number;
+  nx: number;
+  ny: number;
+  type: "window" | "streetlamp" | "fairy" | "garden" | "church" | "bridge";
   isPart4: boolean;
   isPart3: boolean;
   isBrightest: boolean;
   currentLight: number;
   targetLight: number;
   pulseOffset: number;
-  type: "house" | "cottage" | "church" | "lamp";
-  sizeMultiplier: number;
+  color: string;
+  size: number;
+  // Optional string index to draw physical cables between fairy light bulbs
+  stringIndex?: number;
 }
 
 interface Star {
@@ -286,6 +296,13 @@ interface FloatingSparkle {
   twinkleSpeed: number;
 }
 
+interface FairyStringPath {
+  points: { nx: number; ny: number }[];
+  isPart4: boolean;
+  isPart3: boolean;
+  color: string;
+}
+
 export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProps) {
   const [phase, setPhase] = useState<Phase>("opening");
   const [musicEnabled, setMusicEnabled] = useState(false);
@@ -298,7 +315,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
   const synthRef = useRef<MountainVillageSynth | null>(null);
   const phaseRef = useRef<Phase>("opening");
   
-  // Custom camera properties
+  // Drone camera rig
   const cameraRef = useRef({
     x: 0,
     y: 0,
@@ -308,13 +325,19 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     targetScale: 1.0,
   });
 
-  // Floating background systems
+  // Entities
   const starsRef = useRef<Star[]>([]);
   const cloudsRef = useRef<Cloud[]>([]);
   const firefliesRef = useRef<Firefly[]>([]);
   const sparklesRef = useRef<FloatingSparkle[]>([]);
   const fireworksRef = useRef<Firework[]>([]);
-  const housesRef = useRef<House[]>([]);
+  
+  // Real Village Static Layout
+  const staticHousesRef = useRef<StaticHouse[]>([]);
+  // Synchronized Light Show Bulbs
+  const lightsRef = useRef<VillageLight[]>([]);
+  // Hanging Fairy Wires
+  const fairyStringsRef = useRef<FairyStringPath[]>([]);
 
   const animationFrameIdRef = useRef<number | null>(null);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
@@ -325,7 +348,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     phaseStartTimeRef.current = Date.now();
   }, [phase]);
 
-  // Audio system setup and click listener to override browser autoplay blocks
+  // Handle first tap audio init
   useEffect(() => {
     synthRef.current = new MountainVillageSynth();
 
@@ -341,10 +364,9 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
     window.addEventListener("click", handleFirstClick);
 
-    // Fade out audio hint after 4s anyway
     const hintTimer = setTimeout(() => {
       setAudioHintVisible(false);
-    }, 4000);
+    }, 4500);
 
     return () => {
       synthRef.current?.destroy();
@@ -353,17 +375,17 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     };
   }, []);
 
-  // Generate house array structure and star fields
+  // Initialize fully realistic static village elements and overlay lights
   const initializeEntities = () => {
     // 1. Stars
     const stars: Star[] = [];
-    for (let i = 0; i < 220; i++) {
+    for (let i = 0; i < 240; i++) {
       stars.push({
         x: Math.random(),
         y: Math.random() * 0.55,
-        size: 0.6 + Math.random() * 1.6,
+        size: 0.5 + Math.random() * 1.5,
         alpha: 0.15 + Math.random() * 0.85,
-        twinkleSpeed: 0.02 + Math.random() * 0.04,
+        twinkleSpeed: 0.015 + Math.random() * 0.035,
         twinklePhase: Math.random() * Math.PI * 2,
       });
     }
@@ -374,191 +396,428 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     for (let i = 0; i < 5; i++) {
       clouds.push({
         x: Math.random() * 1.5 - 0.25,
-        y: 0.05 + Math.random() * 0.22,
-        width: 0.25 + Math.random() * 0.2,
-        height: 0.06 + Math.random() * 0.04,
-        speed: 0.0003 + Math.random() * 0.0004,
-        alpha: 0.10 + Math.random() * 0.12,
+        y: 0.04 + Math.random() * 0.20,
+        width: 0.22 + Math.random() * 0.2,
+        height: 0.05 + Math.random() * 0.04,
+        speed: 0.00025 + Math.random() * 0.0003,
+        alpha: 0.08 + Math.random() * 0.12,
       });
     }
     cloudsRef.current = clouds;
 
     // 3. Fireflies
     const fireflies: Firefly[] = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 45; i++) {
       fireflies.push({
         x: Math.random(),
-        y: 0.5 + Math.random() * 0.45,
-        size: 1.0 + Math.random() * 1.8,
-        vx: (Math.random() - 0.5) * 0.001,
-        vy: (Math.random() - 0.5) * 0.001,
+        y: 0.45 + Math.random() * 0.5,
+        size: 0.9 + Math.random() * 1.6,
+        vx: (Math.random() - 0.5) * 0.0008,
+        vy: (Math.random() - 0.5) * 0.0008,
         alpha: 0.2 + Math.random() * 0.8,
         pulsePhase: Math.random() * Math.PI * 2,
-        pulseSpeed: 0.03 + Math.random() * 0.05,
+        pulseSpeed: 0.02 + Math.random() * 0.04,
       });
     }
     firefliesRef.current = fireflies;
 
     // 4. Sparkles
     const sparkles: FloatingSparkle[] = [];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 50; i++) {
       sparkles.push({
         x: Math.random(),
         y: Math.random(),
-        vx: (Math.random() - 0.5) * 0.0008,
-        vy: -0.0005 - Math.random() * 0.001,
-        size: 1.0 + Math.random() * 2.0,
-        alpha: 0.1 + Math.random() * 0.7,
+        vx: (Math.random() - 0.5) * 0.0006,
+        vy: -0.0004 - Math.random() * 0.0008,
+        size: 0.8 + Math.random() * 1.8,
+        alpha: 0.1 + Math.random() * 0.6,
         color: "rgba(251, 191, 36, " + (0.3 + Math.random() * 0.5) + ")",
         twinklePhase: Math.random() * Math.PI * 2,
-        twinkleSpeed: 0.04 + Math.random() * 0.08,
+        twinkleSpeed: 0.03 + Math.random() * 0.06,
       });
     }
     sparklesRef.current = sparkles;
 
-    // 5. Generate Houses
-    const houses: House[] = [];
-    let houseIdCounter = 0;
-
-    const points4: { nx: number; ny: number }[] = [];
-    const points3: { nx: number; ny: number }[] = [];
-
-    // Digit "4"
-    for (let y = 0.30; y <= 0.74; y += 0.024) {
-      points4.push({ nx: 0.58, ny: y });
-    }
-    for (let t = 0; t <= 1; t += 0.08) {
-      points4.push({ nx: 0.58 - t * 0.20, ny: 0.30 + t * 0.26 });
-    }
-    for (let x = 0; x <= 0.70; x += 0.024) {
-      if (x >= 0.34) points4.push({ nx: x, ny: 0.56 });
-    }
-
-    // Digit "3" (Thicker, double-row, smooth curved patterns)
-    const cx3_top = 0.50;
-    const cy3_top = 0.40;
-    // Concentric rings for top curve to add artistic thickness
-    for (const r of [0.125, 0.145]) {
-      for (let a = -Math.PI * 0.55; a <= Math.PI * 0.55; a += 0.08) {
-        points3.push({ nx: cx3_top + r * Math.cos(a), ny: cy3_top + r * Math.sin(a) });
-      }
-    }
-    const cx3_bot = 0.50;
-    const cy3_bot = 0.62;
-    // Concentric rings for bottom curve to add artistic thickness
-    for (const r of [0.155, 0.178]) {
-      for (let a = -Math.PI * 0.55; a <= Math.PI * 0.85; a += 0.07) {
-        points3.push({ nx: cx3_bot + r * Math.cos(a), ny: cy3_bot + r * Math.sin(a) });
-      }
-    }
-
-    const addPoints = (pointsList: { nx: number; ny: number }[], partName: "4" | "3") => {
-      pointsList.forEach(pt => {
-        const duplicate = houses.find(
-          h => Math.hypot(h.nx - pt.nx, h.ny - pt.ny) < 0.016
-        );
-        if (duplicate) {
-          if (partName === "4") duplicate.isPart4 = true;
-          if (partName === "3") duplicate.isPart3 = true;
-        } else {
-          let type: "house" | "cottage" | "church" | "lamp" = "house";
-          const roll = Math.random();
-          if (partName === "3") {
-            // High ratio of streetlamps to blend warm house windows with glowing street lamps
-            if (roll < 0.28) type = "lamp";
-            else if (roll < 0.45) type = "cottage";
-          } else {
-            if (roll < 0.10) type = "lamp";
-            else if (roll < 0.25) type = "cottage";
-          }
-
-          houses.push({
-            id: houseIdCounter++,
-            nx: pt.nx,
-            ny: pt.ny,
-            isPart4: partName === "4",
-            isPart3: partName === "3",
-            isBrightest: false,
-            currentLight: 0.0,
-            targetLight: 0.0,
-            pulseOffset: Math.random() * Math.PI * 2,
-            type,
-            sizeMultiplier: 0.85 + Math.random() * 0.3,
-          });
-        }
-      });
-    };
-
-    addPoints(points4, "4");
-    addPoints(points3, "3");
-
-    // Mammoty brightest house
-    const brightestHouse = houses.find(
-      h => h.isPart4 && h.isPart3 && Math.hypot(h.nx - 0.58, h.ny - 0.56) < 0.05
-    ) || houses[Math.floor(houses.length / 2)];
+    // 5. Generate Real Static Houses (Natural cluster streets layout)
+    const houses: StaticHouse[] = [];
+    let lightId = 0;
     
-    if (brightestHouse) {
-      brightestHouse.isBrightest = true;
-      brightestHouse.sizeMultiplier = 1.6;
-      brightestHouse.type = "cottage";
-    }
+    // Winding street paths to structure buildings realistically
+    const street1Y = (x: number) => 0.54 + 0.06 * Math.sin((x - 0.2) * 5);
+    const street2Y = (x: number) => 0.72 + 0.04 * Math.sin(x * 6);
 
-    // Scenic church
-    const churchHouse = houses.find(
-      h => !h.isBrightest && h.ny > 0.45 && h.ny < 0.65 && (h.isPart4 || h.isPart3)
-    );
-    if (churchHouse) {
-      churchHouse.type = "church";
-      churchHouse.sizeMultiplier = 1.8;
-    }
+    const houseWallColors = ["#0e0f21", "#0b0c1b", "#14152b", "#101126", "#0a0b18"];
+    const houseRoofColors = ["#070814", "#0b0404", "#04090c", "#050611", "#09030c"];
 
-    // Fill valley with neutral houses (placed organically next to digits with no spacing corridor)
-    for (let count = 0; count < 130; count++) {
-      let valid = false;
-      let rx = 0, ry = 0;
-      let tries = 0;
+    // Central Stated Church
+    houses.push({
+      id: 0,
+      nx: 0.48,
+      ny: 0.46,
+      type: "church",
+      sizeMultiplier: 1.8,
+      wallColor: "#0f1026",
+      roofColor: "#1a0808",
+      isBrightest: false,
+    });
 
-      while (!valid && tries < 80) {
-        rx = 0.15 + Math.random() * 0.70;
-        ry = 0.35 + Math.random() * 0.52;
-        tries++;
+    // Special Brightest Cottage (Mammoty's House)
+    houses.push({
+      id: 1,
+      nx: 0.56,
+      ny: 0.55, // Located on the light intersections
+      type: "cottage",
+      sizeMultiplier: 1.5,
+      wallColor: "#12142e",
+      roofColor: "#180a0a",
+      isBrightest: true,
+    });
 
-        const distToAnyHouse = houses.reduce((min, h) => {
-          return Math.min(min, Math.hypot(h.nx - rx, h.ny - ry));
-        }, 1.0);
-
-        if (distToAnyHouse > 0.022) {
-          valid = true;
-        }
-      }
-
-      if (valid) {
-        let type: "house" | "cottage" | "church" | "lamp" = "house";
-        const roll = Math.random();
-        if (roll < 0.12) type = "lamp";
-        else if (roll < 0.28) type = "cottage";
-        else if (roll < 0.30) type = "church";
-
+    // Generate normal houses along streets organically
+    let houseIdCounter = 2;
+    for (let x = 0.16; x <= 0.84; x += 0.045) {
+      // Row 1 street
+      if (Math.abs(x - 0.48) > 0.06 && Math.abs(x - 0.56) > 0.05) {
         houses.push({
           id: houseIdCounter++,
-          nx: rx,
-          ny: ry,
-          isPart4: false,
-          isPart3: false,
+          nx: x + (Math.random() - 0.5) * 0.015,
+          ny: street1Y(x) + (Math.random() - 0.5) * 0.02,
+          type: Math.random() < 0.25 ? "cottage" : "house",
+          sizeMultiplier: 0.85 + Math.random() * 0.3,
+          wallColor: houseWallColors[Math.floor(Math.random() * houseWallColors.length)],
+          roofColor: houseRoofColors[Math.floor(Math.random() * houseRoofColors.length)],
+          isBrightest: false,
+        });
+      }
+      
+      // Row 2 street
+      houses.push({
+        id: houseIdCounter++,
+        nx: x + (Math.random() - 0.5) * 0.015,
+        ny: street2Y(x) + (Math.random() - 0.5) * 0.02,
+        type: Math.random() < 0.22 ? "cottage" : "house",
+        sizeMultiplier: 0.85 + Math.random() * 0.3,
+        wallColor: houseWallColors[Math.floor(Math.random() * houseWallColors.length)],
+        roofColor: houseRoofColors[Math.floor(Math.random() * houseRoofColors.length)],
+        isBrightest: false,
+      });
+    }
+
+    // Add extra scatter houses on the mountain slopes
+    const scatterCoords = [
+      { x: 0.22, y: 0.36 }, { x: 0.30, y: 0.40 }, { x: 0.34, y: 0.37 },
+      { x: 0.65, y: 0.38 }, { x: 0.70, y: 0.44 }, { x: 0.78, y: 0.42 }
+    ];
+    scatterCoords.forEach(pt => {
+      houses.push({
+        id: houseIdCounter++,
+        nx: pt.x,
+        ny: pt.y,
+        type: "house",
+        sizeMultiplier: 0.75 + Math.random() * 0.2,
+        wallColor: houseWallColors[Math.floor(Math.random() * houseWallColors.length)],
+        roofColor: houseRoofColors[Math.floor(Math.random() * houseRoofColors.length)],
+        isBrightest: false,
+      });
+    });
+
+    staticHousesRef.current = houses;
+
+    // 6. Generate Village Lights System
+    const lights: VillageLight[] = [];
+
+    // Math function checks to tag lights representing 4 and 3
+    const checkIsPart4 = (x: number, y: number): boolean => {
+      // Stem: x=0.56, y from 0.28 to 0.74
+      const onStem = Math.abs(x - 0.56) < 0.026 && y >= 0.28 && y <= 0.74;
+      // Cross: y=0.55, x from 0.34 to 0.72
+      const onCross = Math.abs(y - 0.55) < 0.026 && x >= 0.34 && x <= 0.72;
+      // Diagonal: y = 0.55 - (0.56 - x) * 1.35
+      const onDiag = Math.abs(y - (0.55 - (0.56 - x) * 1.35)) < 0.028 && x >= 0.36 && x <= 0.56;
+      return onStem || onCross || onDiag;
+    };
+
+    const checkIsPart3 = (x: number, y: number): boolean => {
+      // Concentric circles center/radius
+      const cy3_t = 0.40, cy3_b = 0.62;
+      const d1_t = Math.hypot(x - 0.50, y - cy3_t);
+      const d1_b = Math.hypot(x - 0.50, y - cy3_b);
+
+      const inTopCurve = (d1_t >= 0.115 && d1_t <= 0.155) && x >= 0.485;
+      const inBotCurve = (d1_b >= 0.145 && d1_b <= 0.198) && (x >= 0.47 || y >= 0.64);
+      return inTopCurve || inBotCurve;
+    };
+
+    // A. Add Window Lights for each house
+    houses.forEach(house => {
+      const isBr = house.isBrightest;
+      
+      if (house.type === "church") {
+        // Stained glass center window
+        lights.push({
+          id: lightId++,
+          nx: house.nx,
+          ny: house.ny + 0.005,
+          type: "church",
+          isPart4: checkIsPart4(house.nx, house.ny + 0.005),
+          isPart3: checkIsPart3(house.nx, house.ny + 0.005),
           isBrightest: false,
           currentLight: 0.0,
           targetLight: 0.0,
           pulseOffset: Math.random() * Math.PI * 2,
-          type,
-          sizeMultiplier: type === "church" ? 1.6 : 0.85 + Math.random() * 0.3,
+          color: "rgba(251, 146, 60, 0.95)",
+          size: 4.5,
+        });
+        // Steeple top light
+        lights.push({
+          id: lightId++,
+          nx: house.nx,
+          ny: house.ny - 0.038,
+          type: "church",
+          isPart4: checkIsPart4(house.nx, house.ny - 0.038),
+          isPart3: checkIsPart3(house.nx, house.ny - 0.038),
+          isBrightest: false,
+          currentLight: 0.0,
+          targetLight: 0.0,
+          pulseOffset: Math.random() * Math.PI * 2,
+          color: "rgba(254, 240, 138, 0.95)",
+          size: 2.2,
+        });
+      } else {
+        // Left Window
+        const wx1 = house.nx - 0.0045 * house.sizeMultiplier;
+        const wy1 = house.ny - 0.002 * house.sizeMultiplier;
+        lights.push({
+          id: lightId++,
+          nx: wx1,
+          ny: wy1,
+          type: "window",
+          isPart4: checkIsPart4(wx1, wy1),
+          isPart3: checkIsPart3(wx1, wy1),
+          isBrightest: isBr,
+          currentLight: 0.0,
+          targetLight: 0.0,
+          pulseOffset: Math.random() * Math.PI * 2,
+          color: "rgba(251, 191, 36, 0.9)",
+          size: 1.8 * house.sizeMultiplier,
+        });
+
+        // Right Window
+        const wx2 = house.nx + 0.0045 * house.sizeMultiplier;
+        const wy2 = house.ny - 0.002 * house.sizeMultiplier;
+        lights.push({
+          id: lightId++,
+          nx: wx2,
+          ny: wy2,
+          type: "window",
+          isPart4: checkIsPart4(wx2, wy2),
+          isPart3: checkIsPart3(wx2, wy2),
+          isBrightest: isBr,
+          currentLight: 0.0,
+          targetLight: 0.0,
+          pulseOffset: Math.random() * Math.PI * 2,
+          color: "rgba(251, 191, 36, 0.9)",
+          size: 1.8 * house.sizeMultiplier,
         });
       }
+    });
+
+    // B. Add Winding Street Lamps
+    for (let x = 0.18; x <= 0.82; x += 0.04) {
+      const y1 = street1Y(x) + 0.03;
+      lights.push({
+        id: lightId++,
+        nx: x,
+        ny: y1,
+        type: "streetlamp",
+        isPart4: checkIsPart4(x, y1),
+        isPart3: checkIsPart3(x, y1),
+        isBrightest: false,
+        currentLight: 0.0,
+        targetLight: 0.0,
+        pulseOffset: Math.random() * Math.PI * 2,
+        color: "rgba(254, 240, 138, 0.95)",
+        size: 2.2,
+      });
+
+      const y2 = street2Y(x) - 0.025;
+      lights.push({
+        id: lightId++,
+        nx: x,
+        ny: y2,
+        type: "streetlamp",
+        isPart4: checkIsPart4(x, y2),
+        isPart3: checkIsPart3(x, y2),
+        isBrightest: false,
+        currentLight: 0.0,
+        targetLight: 0.0,
+        pulseOffset: Math.random() * Math.PI * 2,
+        color: "rgba(254, 240, 138, 0.95)",
+        size: 2.2,
+      });
     }
 
-    housesRef.current = houses;
+    // C. Bridge Lamps (on the stone bridge)
+    const bridgeX = 0.44;
+    const bridgeY = 0.52;
+    for (let bx = -15; bx <= 15; bx += 7.5) {
+      const nx = bridgeX + bx * 0.0012;
+      const ny = bridgeY - 0.01;
+      lights.push({
+        id: lightId++,
+        nx,
+        ny,
+        type: "bridge",
+        isPart4: checkIsPart4(nx, ny),
+        isPart3: checkIsPart3(nx, ny),
+        isBrightest: false,
+        currentLight: 0.0,
+        targetLight: 0.0,
+        pulseOffset: Math.random() * Math.PI * 2,
+        color: "rgba(253, 224, 71, 0.95)",
+        size: 1.8,
+      });
+    }
+
+    // D. Garden Floor decorative clusters
+    const gardenPoints = [
+      { x: 0.28, y: 0.60 }, { x: 0.35, y: 0.65 }, { x: 0.68, y: 0.62 },
+      { x: 0.74, y: 0.69 }, { x: 0.51, y: 0.81 }, { x: 0.42, y: 0.78 }
+    ];
+    gardenPoints.forEach(pt => {
+      for (let i = 0; i < 4; i++) {
+        const lx = pt.x + (Math.random() - 0.5) * 0.024;
+        const ly = pt.y + (Math.random() - 0.5) * 0.015;
+        lights.push({
+          id: lightId++,
+          nx: lx,
+          ny: ly,
+          type: "garden",
+          isPart4: checkIsPart4(lx, ly),
+          isPart3: checkIsPart3(lx, ly),
+          isBrightest: false,
+          currentLight: 0.0,
+          targetLight: 0.0,
+          pulseOffset: Math.random() * Math.PI * 2,
+          color: "rgba(251, 191, 36, 0.8)",
+          size: 1.2,
+        });
+      }
+    });
+
+    // E. Synchronized Fairy Garland Strings (Light show wires)
+    // These wires hang between street posts/roofs and map the number paths
+    const strings: FairyStringPath[] = [];
+    const stringsLightsCount = 20;
+
+    // String for number 4 diagonal
+    const s4_diag: FairyStringPath = { points: [], isPart4: true, isPart3: false, color: "rgba(251,191,36,0.85)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const t = i / stringsLightsCount;
+      s4_diag.points.push({ nx: 0.56 - t * 0.20, ny: 0.28 + t * 0.27 });
+    }
+    strings.push(s4_diag);
+
+    // String for number 4 horizontal
+    const s4_cross: FairyStringPath = { points: [], isPart4: true, isPart3: false, color: "rgba(251,191,36,0.85)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const t = i / stringsLightsCount;
+      s4_cross.points.push({ nx: 0.34 + t * 0.38, ny: 0.55 });
+    }
+    strings.push(s4_cross);
+
+    // String for number 4 stem
+    const s4_stem: FairyStringPath = { points: [], isPart4: true, isPart3: false, color: "rgba(251,191,36,0.85)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const t = i / stringsLightsCount;
+      s4_stem.points.push({ nx: 0.56, ny: 0.28 + t * 0.46 });
+    }
+    strings.push(s4_stem);
+
+    // String 3 top outer loop
+    const s3_t_out: FairyStringPath = { points: [], isPart4: false, isPart3: true, color: "rgba(251,191,36,0.9)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const a = -Math.PI * 0.55 + (i / stringsLightsCount) * (Math.PI * 1.1);
+      s3_t_out.points.push({ nx: 0.50 + 0.145 * Math.cos(a), ny: 0.40 + 0.145 * Math.sin(a) });
+    }
+    strings.push(s3_t_out);
+
+    // String 3 top inner loop
+    const s3_t_in: FairyStringPath = { points: [], isPart4: false, isPart3: true, color: "rgba(251,191,36,0.9)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const a = -Math.PI * 0.52 + (i / stringsLightsCount) * (Math.PI * 1.04);
+      s3_t_in.points.push({ nx: 0.50 + 0.125 * Math.cos(a), ny: 0.40 + 0.125 * Math.sin(a) });
+    }
+    strings.push(s3_t_in);
+
+    // String 3 bottom outer loop
+    const s3_b_out: FairyStringPath = { points: [], isPart4: false, isPart3: true, color: "rgba(251,191,36,0.9)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const a = -Math.PI * 0.52 + (i / stringsLightsCount) * (Math.PI * 1.34);
+      s3_b_out.points.push({ nx: 0.50 + 0.185 * Math.cos(a), ny: 0.62 + 0.185 * Math.sin(a) });
+    }
+    strings.push(s3_b_out);
+
+    // String 3 bottom inner loop
+    const s3_b_in: FairyStringPath = { points: [], isPart4: false, isPart3: true, color: "rgba(251,191,36,0.9)" };
+    for (let i = 0; i <= stringsLightsCount; i++) {
+      const a = -Math.PI * 0.50 + (i / stringsLightsCount) * (Math.PI * 1.30);
+      s3_b_in.points.push({ nx: 0.50 + 0.155 * Math.cos(a), ny: 0.62 + 0.155 * Math.sin(a) });
+    }
+    strings.push(s3_b_in);
+
+    // Background festival strings (to blend and represent overall village lighting)
+    const backStrings = [
+      { x1: 0.18, y1: 0.50, x2: 0.32, y2: 0.52 },
+      { x1: 0.68, y1: 0.50, x2: 0.82, y2: 0.48 },
+      { x1: 0.25, y1: 0.68, x2: 0.40, y2: 0.70 },
+      { x1: 0.60, y1: 0.70, x2: 0.76, y2: 0.73 }
+    ];
+    backStrings.forEach((bStr, sIdx) => {
+      const fStr: FairyStringPath = { points: [], isPart4: false, isPart3: false, color: "rgba(251,191,36,0.7)" };
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const nx = bStr.x1 + (bStr.x2 - bStr.x1) * t;
+        const sag = 0.02 * Math.sin(t * Math.PI); // Sagging wire catenary look
+        const ny = bStr.y1 + (bStr.y2 - bStr.y1) * t + sag;
+        fStr.points.push({ nx, ny });
+      }
+      strings.push(fStr);
+    });
+
+    fairyStringsRef.current = strings;
+
+    // Convert fairy string coordinates to lights
+    strings.forEach((str, sIdx) => {
+      str.points.forEach(pt => {
+        lights.push({
+          id: lightId++,
+          nx: pt.nx,
+          ny: pt.ny,
+          type: "fairy",
+          isPart4: str.isPart4,
+          isPart3: str.isPart3,
+          isBrightest: false,
+          currentLight: 0.0,
+          targetLight: 0.0,
+          pulseOffset: Math.random() * Math.PI * 2,
+          color: "rgba(253, 224, 71, 0.9)",
+          size: 1.3,
+          stringIndex: sIdx,
+        });
+      });
+    });
+
+    // Make sure Mammoty's window light is locked to isBrightest
+    const brightestWindow = lights.find(l => l.isBrightest);
+    if (brightestWindow) {
+      brightestWindow.size = 3.5;
+      brightestWindow.color = "rgba(249, 115, 22, 1.0)"; // Special intense sunset glow
+    }
+
+    lightsRef.current = lights;
   };
 
-  // Direct sequence play timeline
   const runSequenceTimeline = () => {
     timersRef.current.forEach(t => clearTimeout(t));
     timersRef.current = [];
@@ -574,63 +833,63 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     // 0s: Opening pan
     setPhase("opening");
 
-    // 3.5s: Scene 1 - Breathing Village (6s)
+    // 4s: The Village Breathes (6s)
     delay(() => {
       setPhase("scene1_breathing");
-    }, 3500);
+    }, 4000);
 
-    // 9.5s: Scene 2 - Sudden Blackout (2s)
+    // 10s: First Blackout (2.5s)
     delay(() => {
       setPhase("scene2_blackout");
-    }, 9500);
+    }, 10000);
 
-    // 11.5s: Scene 3 - Number 4 Forms (8s)
+    // 12.5s: Yesterday - Number 4 Forms (8s)
     delay(() => {
       setPhase("scene3_number4");
-    }, 11500);
+    }, 12500);
 
-    // 19.5s: Scene 4 - Darkness Returns (2s)
+    // 20.5s: Second Blackout (2.5s)
     delay(() => {
       setPhase("scene4_blackout");
-    }, 19500);
+    }, 20500);
 
-    // 21.5s: Scene 5 - Number 3 Forms (8s)
+    // 23s: Today - Number 3 Forms (8s)
     delay(() => {
       setPhase("scene5_number3");
-    }, 21500);
+    }, 23000);
 
-    // 29.5s: Scene 6 - Village Celebrates (6s)
+    // 31s: Celebration - Background Lights turn on, 3 stays highlighted (8s)
     delay(() => {
       setPhase("scene6_celebration");
       if (synthRef.current) {
         synthRef.current.playChurchBells();
       }
-    }, 29500);
+    }, 31000);
 
-    // 35.5s: Scene 7 - Final Reveal titles (5s)
+    // 39s: Final Reveal Titles (7s)
     delay(() => {
       setPhase("final_reveal");
-    }, 35500);
+    }, 39000);
 
-    // 40.5s: Scene 8 - One Light Remains (6s)
+    // 46s: Emotional Ending - Everything dims together, leaving one (7s)
     delay(() => {
       setPhase("scene8_one_light");
-    }, 40500);
+    }, 46000);
 
-    // 46.5s: Scene 9 - Emotional Ending Window Zoom (5s)
+    // 53s: Emotional Quote Display (5s)
     delay(() => {
       setPhase("scene9_quote");
-    }, 46500);
+    }, 53000);
 
-    // 51.5s: Scene 10 - Fade to Moon (3s)
+    // 58s: Rise to Moon (4s)
     delay(() => {
       setPhase("scene10_fade_moon");
-    }, 51500);
+    }, 58000);
 
-    // 54.5s: End sequence - Reveal Interactive Chest Surprise
+    // 62s: End sequence - Reveal Interactive Chest
     delay(() => {
       setPhase("interactive_chest");
-    }, 54500);
+    }, 62000);
   };
 
   useEffect(() => {
@@ -672,68 +931,68 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
       // 1. Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-      skyGrad.addColorStop(0, "#020205");
-      skyGrad.addColorStop(0.35, "#0b0c1b");
-      skyGrad.addColorStop(0.70, "#191730");
-      skyGrad.addColorStop(1.0, "#080611");
+      skyGrad.addColorStop(0, "#010103");
+      skyGrad.addColorStop(0.35, "#090a16");
+      skyGrad.addColorStop(0.70, "#131224");
+      skyGrad.addColorStop(1.0, "#06050b");
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
       // 2. Twinkling Stars
       starsRef.current.forEach(star => {
         star.twinklePhase += star.twinkleSpeed;
-        const currentAlpha = Math.max(0.1, Math.min(1.0, star.alpha + Math.sin(star.twinklePhase) * 0.35));
+        const currentAlpha = Math.max(0.1, Math.min(1.0, star.alpha + Math.sin(star.twinklePhase) * 0.3));
         ctx.fillStyle = `rgba(255, 255, 255, ${currentAlpha})`;
         ctx.beginPath();
         ctx.arc(star.x * w, star.y * h, star.size, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // 3. Moon
+      // 3. Volumetric Moon Glow
       const moonX = w * 0.82;
       const moonY = h * 0.18;
       const moonR = Math.min(w, h) * 0.075;
 
-      const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 3.2);
-      moonGlow.addColorStop(0, "rgba(255, 252, 243, 0.85)");
-      moonGlow.addColorStop(0.15, "rgba(255, 250, 230, 0.35)");
-      moonGlow.addColorStop(0.40, "rgba(255, 245, 220, 0.08)");
-      moonGlow.addColorStop(1.0, "rgba(255, 245, 220, 0)");
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 3.4);
+      moonGlow.addColorStop(0, "rgba(255, 251, 240, 0.85)");
+      moonGlow.addColorStop(0.15, "rgba(255, 248, 225, 0.32)");
+      moonGlow.addColorStop(0.40, "rgba(255, 242, 215, 0.08)");
+      moonGlow.addColorStop(1.0, "rgba(255, 242, 215, 0)");
       ctx.fillStyle = moonGlow;
       ctx.beginPath();
-      ctx.arc(moonX, moonY, moonR * 3.2, 0, Math.PI * 2);
+      ctx.arc(moonX, moonY, moonR * 3.4, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = "#fffdf5";
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "rgba(255, 253, 240, 0.65)";
+      ctx.fillStyle = "#fffdf3";
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = "rgba(255, 251, 235, 0.65)";
       ctx.beginPath();
       ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      ctx.fillStyle = "rgba(238, 230, 204, 0.3)";
+      ctx.fillStyle = "rgba(235, 226, 198, 0.28)";
       ctx.beginPath();
-      ctx.arc(moonX - moonR * 0.3, moonY + moonR * 0.2, moonR * 0.25, 0, Math.PI * 2);
-      ctx.arc(moonX + moonR * 0.2, moonY - moonR * 0.4, moonR * 0.22, 0, Math.PI * 2);
-      ctx.arc(moonX + moonR * 0.4, moonY + moonR * 0.1, moonR * 0.18, 0, Math.PI * 2);
+      ctx.arc(moonX - moonR * 0.3, moonY + moonR * 0.25, moonR * 0.24, 0, Math.PI * 2);
+      ctx.arc(moonX + moonR * 0.25, moonY - moonR * 0.38, moonR * 0.20, 0, Math.PI * 2);
+      ctx.arc(moonX + moonR * 0.45, moonY + moonR * 0.12, moonR * 0.16, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Clouds
+      // 4. Moving Clouds
       cloudsRef.current.forEach(cloud => {
         cloud.x += cloud.speed;
-        if (cloud.x > 1.2) cloud.x = -0.3;
+        if (cloud.x > 1.25) cloud.x = -0.3;
         const cx = cloud.x * w;
         const cy = cloud.y * h;
         const cw = cloud.width * w;
         const ch = cloud.height * h;
-        ctx.fillStyle = `rgba(224, 231, 255, ${cloud.alpha})`;
+        ctx.fillStyle = `rgba(219, 228, 255, ${cloud.alpha})`;
         ctx.beginPath();
         ctx.ellipse(cx, cy, cw, ch, 0, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // 5. Camera translations (cinematic drone)
+      // 5. Camera transitions (Cinematic drone)
       const cam = cameraRef.current;
       switch (phaseRef.current) {
         case "opening":
@@ -749,7 +1008,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         case "scene2_blackout":
           cam.targetScale = 1.02;
           cam.targetX = 0;
-          cam.targetY = h * 0.02;
+          cam.targetY = h * 0.01;
           break;
         case "scene3_number4":
           cam.targetScale = 0.90;
@@ -762,46 +1021,46 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           cam.targetY = 0;
           break;
         case "scene5_number3":
-          cam.targetScale = 0.82;
-          cam.targetX = w * 0.04;
-          cam.targetY = -h * 0.06;
+          cam.targetScale = 0.80;
+          cam.targetX = w * 0.05;
+          cam.targetY = -h * 0.08;
           break;
         case "scene6_celebration":
-          cam.targetScale = 0.95;
-          cam.targetX = 0;
-          cam.targetY = -h * 0.03;
-          break;
-        case "final_reveal":
-          cam.targetScale = 1.00;
+          cam.targetScale = 0.88;
           cam.targetX = 0;
           cam.targetY = -h * 0.05;
           break;
+        case "final_reveal":
+          cam.targetScale = 0.92;
+          cam.targetX = 0;
+          cam.targetY = -h * 0.06;
+          break;
         case "scene8_one_light":
-          const bHouse = housesRef.current.find(h => h.isBrightest);
-          if (bHouse) {
+          const bLight = lightsRef.current.find(l => l.isBrightest);
+          if (bLight) {
             const baseScale = Math.min(w, h) * 0.9;
-            const houseSX = w / 2 + (bHouse.nx - 0.5) * baseScale;
-            const houseSY = h / 2 + (bHouse.ny - 0.5) * baseScale;
-            cam.targetScale = 2.4;
-            cam.targetX = w / 2 - houseSX * 2.4;
-            cam.targetY = h / 2 - houseSY * 2.4;
+            const lightSX = w / 2 + (bLight.nx - 0.5) * baseScale;
+            const lightSY = h / 2 + (bLight.ny - 0.5) * baseScale;
+            cam.targetScale = 2.6;
+            cam.targetX = w / 2 - lightSX * 2.6;
+            cam.targetY = h / 2 - (lightSY + 0.005 * baseScale) * 2.6;
           }
           break;
         case "scene9_quote":
-          const bHouseQ = housesRef.current.find(h => h.isBrightest);
-          if (bHouseQ) {
+          const bLightQ = lightsRef.current.find(l => l.isBrightest);
+          if (bLightQ) {
             const baseScale = Math.min(w, h) * 0.9;
-            const houseSX = w / 2 + (bHouseQ.nx - 0.5) * baseScale;
-            const houseSY = h / 2 + (bHouseQ.ny - 0.5) * baseScale;
-            cam.targetScale = 3.6;
-            cam.targetX = w / 2 - houseSX * 3.6;
-            cam.targetY = h / 2 - houseSY * 3.6;
+            const lightSX = w / 2 + (bLightQ.nx - 0.5) * baseScale;
+            const lightSY = h / 2 + (bLightQ.ny - 0.5) * baseScale;
+            cam.targetScale = 3.8;
+            cam.targetX = w / 2 - lightSX * 3.8;
+            cam.targetY = h / 2 - (lightSY + 0.005 * baseScale) * 3.8;
           }
           break;
         case "scene10_fade_moon":
-          cam.targetScale = 4.0;
-          cam.targetX = w / 2 - moonX * 4.0;
-          cam.targetY = h / 2 - moonY * 4.0;
+          cam.targetScale = 4.2;
+          cam.targetX = w / 2 - moonX * 4.2;
+          cam.targetY = h / 2 - moonY * 4.2;
           break;
         default:
           cam.targetScale = 1.00;
@@ -844,20 +1103,20 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       const farMountainHeight = [0.22, 0.28, 0.20, 0.26, 0.35, 0.25, 0.18, 0.29, 0.33, 0.22, 0.26];
       const farFog = ctx.createLinearGradient(0, h * 0.25, 0, h * 0.5);
       farFog.addColorStop(0, "rgba(25, 23, 48, 0.0)");
-      farFog.addColorStop(1, "rgba(9, 9, 21, 0.18)");
-      drawMountainRange(farMountainHeight, h * 0.40, "#080816", farFog);
+      farFog.addColorStop(1, "rgba(9, 9, 21, 0.16)");
+      drawMountainRange(farMountainHeight, h * 0.40, "#070714", farFog);
 
       const midMountainHeight = [0.12, 0.17, 0.15, 0.09, 0.18, 0.22, 0.14, 0.19, 0.16, 0.11, 0.13];
       const midFog = ctx.createLinearGradient(0, h * 0.38, 0, h * 0.65);
       midFog.addColorStop(0, "rgba(25, 23, 48, 0.0)");
-      midFog.addColorStop(1, "rgba(10, 10, 24, 0.25)");
-      drawMountainRange(midMountainHeight, h * 0.52, "#0a0c1b", midFog);
+      midFog.addColorStop(1, "rgba(10, 10, 24, 0.22)");
+      drawMountainRange(midMountainHeight, h * 0.52, "#090a19", midFog);
 
       // 7. River and bridge
-      ctx.strokeStyle = "rgba(43, 85, 137, 0.35)";
+      ctx.strokeStyle = "rgba(43, 85, 137, 0.30)";
       ctx.lineWidth = 4;
       ctx.shadowBlur = 8;
-      ctx.shadowColor = "rgba(63, 142, 233, 0.3)";
+      ctx.shadowColor = "rgba(63, 142, 233, 0.25)";
       ctx.beginPath();
       ctx.moveTo(toScreenX(0.48), toScreenY(0.38));
       ctx.quadraticCurveTo(toScreenX(0.40), toScreenY(0.50), toScreenX(0.53), toScreenY(0.65));
@@ -865,37 +1124,37 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      ctx.strokeStyle = "rgba(255, 253, 240, 0.3)";
+      ctx.strokeStyle = "rgba(255, 253, 240, 0.22)";
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       const bx = toScreenX(0.44);
       const by = toScreenY(0.52);
-      ctx.fillStyle = "#0c0a1a";
-      ctx.strokeStyle = "#25213b";
+      ctx.fillStyle = "#0a0917";
+      ctx.strokeStyle = "#1b1830";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(bx, by, 16, Math.PI, 0);
       ctx.fill();
       ctx.stroke();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
       ctx.beginPath();
       ctx.moveTo(bx - 20, by - 6);
       ctx.lineTo(bx + 20, by - 6);
       ctx.stroke();
 
-      // 8. Pine trees (with wind sway bend animation)
+      // 8. Pine trees (realistic wind sway)
       const pineTrees = [
         { nx: 0.28, ny: 0.44 }, { nx: 0.32, ny: 0.48 }, { nx: 0.35, ny: 0.41 },
         { nx: 0.65, ny: 0.46 }, { nx: 0.69, ny: 0.41 }, { nx: 0.72, ny: 0.50 },
         { nx: 0.45, ny: 0.76 }, { nx: 0.48, ny: 0.81 }, { nx: 0.39, ny: 0.80 },
         { nx: 0.56, ny: 0.88 }, { nx: 0.61, ny: 0.90 }, { nx: 0.63, ny: 0.82 }
       ];
-      ctx.fillStyle = "#05060f";
+      ctx.fillStyle = "#04040a";
       pineTrees.forEach(tree => {
         const tx = toScreenX(tree.nx);
         const ty = toScreenY(tree.ny);
-        const windSway = Math.sin(tNow * 0.0016 + tree.nx * 20) * 1.6;
+        const windSway = Math.sin(tNow * 0.0016 + tree.nx * 20) * 1.5;
         
         ctx.beginPath();
         ctx.moveTo(tx + windSway, ty - 18);
@@ -905,83 +1164,8 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.fill();
       });
 
-      // 9. Update & Draw Houses
-      const houses = housesRef.current;
-      houses.forEach(house => {
-        switch (phaseRef.current) {
-          case "opening":
-            house.targetLight = 0.85;
-            break;
-          case "scene1_breathing":
-            const pulse = 0.45 + 0.55 * Math.sin(tNow * 0.0016 + house.pulseOffset);
-            house.targetLight = pulse;
-            break;
-          case "scene2_blackout":
-            house.targetLight = 0.0;
-            break;
-          case "scene3_number4":
-            if (house.isPart4) {
-              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.0003;
-              const threshold = Math.min(1.1, waveElapsed);
-              if (threshold > house.nx) {
-                house.targetLight = 0.9 + 0.1 * Math.sin(tNow * 0.002 + house.pulseOffset);
-              } else {
-                house.targetLight = 0.0;
-              }
-            } else {
-              house.targetLight = 0.0;
-            }
-            break;
-          case "scene4_blackout":
-            house.targetLight = 0.0;
-            break;
-          case "scene5_number3":
-            if (house.isPart3) {
-              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.00028;
-              const threshold = Math.min(1.5, waveElapsed);
-              const waveOffset = (house.nx + house.ny) / 2.0;
-              if (threshold > waveOffset) {
-                house.targetLight = 0.95 + 0.05 * Math.sin(tNow * 0.0018 + house.pulseOffset);
-              } else {
-                house.targetLight = 0.0;
-              }
-            } else {
-              house.targetLight = 0.0;
-            }
-            break;
-          case "scene6_celebration":
-          case "final_reveal":
-            if (house.isPart3) {
-              house.targetLight = 1.0;
-            } else {
-              // Slowly fade in non-digit houses to a soft, warm ambient light, keeping the 3 highlighted
-              const elapsed = (tNow - phaseStartTimeRef.current) * 0.00015;
-              house.targetLight = Math.min(0.38, elapsed) + 0.04 * Math.sin(tNow * 0.0016 + house.pulseOffset);
-            }
-            break;
-          case "scene8_one_light":
-          case "scene9_quote":
-            if (house.isBrightest) {
-              house.targetLight = 1.0;
-            } else {
-              // Let all other lights decay down. This naturally blends the number 3 back into the village as they all dim.
-              house.targetLight = Math.max(0, house.currentLight - 0.012);
-            }
-            break;
-          case "scene10_fade_moon":
-            house.targetLight = Math.max(0, house.currentLight - 0.02);
-            break;
-          default:
-            house.targetLight = 0.0;
-            break;
-        }
-
-        if (phaseRef.current === "scene2_blackout" || phaseRef.current === "scene4_blackout") {
-          house.currentLight = 0.0;
-        } else {
-          house.currentLight += (house.targetLight - house.currentLight) * 0.065;
-        }
-
+      // 9. Draw Static Houses & Buildings (SILHOUETTES ALWAYS REMAIN)
+      staticHousesRef.current.forEach(house => {
         const hx = toScreenX(house.nx);
         const hy = toScreenY(house.ny);
         const hSize = 8.5 * house.sizeMultiplier;
@@ -989,18 +1173,16 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.save();
         ctx.translate(hx, hy);
 
-        ctx.fillStyle = `rgba(${30 - Math.floor(house.currentLight * 10)}, ${38 - Math.floor(house.currentLight * 12)}, ${56 - Math.floor(house.currentLight * 16)}, 1.0)`;
-        if (house.currentLight > 0.05) {
-          ctx.fillStyle = `rgba(${135 + Math.floor(house.currentLight * 35)}, ${105 + Math.floor(house.currentLight * 25)}, ${90 + Math.floor(house.currentLight * 15)}, 1.0)`;
-        }
-
         if (house.type === "church") {
+          // Church silhouette walls
+          ctx.fillStyle = house.wallColor;
           ctx.beginPath();
           ctx.rect(-hSize * 0.5, -hSize * 0.5, hSize, hSize);
           ctx.rect(-hSize * 0.22, -hSize * 1.5, hSize * 0.44, hSize);
           ctx.fill();
           
-          ctx.fillStyle = house.currentLight > 0.1 ? "#9c4033" : "#0d091a";
+          // Church steeple roof
+          ctx.fillStyle = house.roofColor;
           ctx.beginPath();
           ctx.moveTo(0, -hSize * 2.3);
           ctx.lineTo(-hSize * 0.25, -hSize * 1.5);
@@ -1008,89 +1190,195 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.closePath();
           ctx.fill();
 
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.lineWidth = 1.5;
+          // Church cross outline
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(0, -hSize * 2.3);
           ctx.lineTo(0, -hSize * 2.5);
-          ctx.moveTo(-hSize * 0.12, -hSize * 2.45);
-          ctx.lineTo(hSize * 0.12, -hSize * 2.45);
+          ctx.moveTo(-hSize * 0.10, -hSize * 2.44);
+          ctx.lineTo(hSize * 0.10, -hSize * 2.44);
           ctx.stroke();
-
-          if (house.currentLight > 0.05) {
-            ctx.shadowBlur = 12 * house.currentLight;
-            ctx.shadowColor = "rgba(251, 146, 60, 0.85)";
-            ctx.fillStyle = "rgba(251, 146, 60, " + house.currentLight + ")";
-            ctx.beginPath();
-            ctx.arc(0, -hSize * 0.8, hSize * 0.16, 0, Math.PI, true);
-            ctx.lineTo(hSize * 0.16, -hSize * 0.5);
-            ctx.lineTo(-hSize * 0.16, -hSize * 0.5);
-            ctx.closePath();
-            ctx.fill();
-            ctx.shadowBlur = 0;
-          }
-        } 
-        else if (house.type === "lamp") {
-          ctx.strokeStyle = "#110f22";
-          ctx.lineWidth = 2.0;
-          ctx.beginPath();
-          ctx.moveTo(0, hSize * 0.8);
-          ctx.lineTo(0, -hSize * 0.4);
-          ctx.stroke();
-
-          if (house.currentLight > 0.05) {
-            ctx.shadowBlur = 14 * house.currentLight;
-            ctx.shadowColor = "rgba(253, 224, 71, 0.95)";
-            ctx.fillStyle = `rgba(253, 224, 71, ${house.currentLight})`;
-            ctx.beginPath();
-            ctx.arc(0, -hSize * 0.4, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-          } else {
-            ctx.fillStyle = "#0c0c16";
-            ctx.beginPath();
-            ctx.arc(0, -hSize * 0.4, 2, 0, Math.PI * 2);
-            ctx.fill();
-          }
         } 
         else {
+          // Standard house silhouette walls
+          ctx.fillStyle = house.wallColor;
           ctx.beginPath();
           ctx.rect(-hSize * 0.5, -hSize * 0.4, hSize, hSize * 0.8);
           ctx.fill();
 
-          ctx.fillStyle = house.currentLight > 0.1 ? "#aa4d3d" : "#0d091f";
+          // House roofs
+          ctx.fillStyle = house.roofColor;
           ctx.beginPath();
           ctx.moveTo(0, -hSize * 0.85);
           ctx.lineTo(-hSize * 0.65, -hSize * 0.4);
           ctx.lineTo(hSize * 0.65, -hSize * 0.4);
           ctx.closePath();
           ctx.fill();
-
-          if (house.currentLight > 0.05) {
-            ctx.shadowBlur = 10 * house.currentLight;
-            ctx.shadowColor = "rgba(251, 191, 36, 0.9)";
-            ctx.fillStyle = `rgba(251, 191, 36, ${house.currentLight})`;
-
-            ctx.fillRect(-hSize * 0.28, -hSize * 0.15, hSize * 0.18, hSize * 0.18);
-            ctx.fillRect(hSize * 0.1, -hSize * 0.15, hSize * 0.18, hSize * 0.18);
-            
-            if (house.isBrightest) {
-              ctx.fillStyle = `rgba(249, 115, 22, ${house.currentLight})`;
-              ctx.fillRect(-hSize * 0.1, hSize * 0.1, hSize * 0.2, hSize * 0.3);
-            }
-            ctx.shadowBlur = 0;
-          }
         }
 
         ctx.restore();
       });
 
-      // 10. Fireflies
+      // 10. Draw Fairy Light Garland wires (Silhouettes/wires always remain)
+      fairyStringsRef.current.forEach(str => {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        str.points.forEach((pt, idx) => {
+          if (idx === 0) ctx.moveTo(toScreenX(pt.nx), toScreenY(pt.ny));
+          else ctx.lineTo(toScreenX(pt.nx), toScreenY(pt.ny));
+        });
+        ctx.stroke();
+      });
+
+      // 11. Update & Draw Village Light Points (THE SHOWN LIGHT SHOW)
+      const lights = lightsRef.current;
+      lights.forEach(light => {
+        switch (phaseRef.current) {
+          case "opening":
+            // Full illumination at beginning
+            light.targetLight = 0.85;
+            break;
+          case "scene1_breathing":
+            // Breathe smoothly
+            const pulse = 0.45 + 0.55 * Math.sin(tNow * 0.0016 + light.pulseOffset);
+            light.targetLight = pulse;
+            break;
+          case "scene2_blackout":
+            // Sudden blackout
+            light.targetLight = 0.0;
+            break;
+          case "scene3_number4":
+            // Lights sweep on to form 4
+            if (light.isPart4) {
+              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.0003;
+              const threshold = Math.min(1.1, waveElapsed);
+              if (threshold > light.nx) {
+                light.targetLight = 0.90 + 0.1 * Math.sin(tNow * 0.002 + light.pulseOffset);
+              } else {
+                light.targetLight = 0.0;
+              }
+            } else {
+              light.targetLight = 0.0;
+            }
+            break;
+          case "scene4_blackout":
+            // Blackout again
+            light.targetLight = 0.0;
+            break;
+          case "scene5_number3":
+            // Lights sweep on to form 3
+            if (light.isPart3) {
+              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.00028;
+              const threshold = Math.min(1.5, waveElapsed);
+              const waveOffset = (light.nx + light.ny) / 2.0;
+              if (threshold > waveOffset) {
+                light.targetLight = 0.95 + 0.05 * Math.sin(tNow * 0.0018 + light.pulseOffset);
+              } else {
+                light.targetLight = 0.0;
+              }
+            } else {
+              light.targetLight = 0.0;
+            }
+            break;
+          case "scene6_celebration":
+          case "final_reveal":
+            // Keep 3 fully visible, slowly fade back in other lights to softer intensity
+            if (light.isPart3) {
+              light.targetLight = 1.0;
+            } else {
+              const elapsed = (tNow - phaseStartTimeRef.current) * 0.00015;
+              light.targetLight = Math.min(0.38, elapsed) + 0.04 * Math.sin(tNow * 0.0016 + light.pulseOffset);
+            }
+            break;
+          case "scene8_one_light":
+          case "scene9_quote":
+            if (light.isBrightest) {
+              light.targetLight = 1.0;
+            } else {
+              // Smooth decay back to zero (naturally blending 3 back into the village as they all dim)
+              light.targetLight = Math.max(0, light.currentLight - 0.012);
+            }
+            break;
+          case "scene10_fade_moon":
+            light.targetLight = Math.max(0, light.currentLight - 0.02);
+            break;
+          default:
+            light.targetLight = 0.0;
+            break;
+        }
+
+        // Apply fast blackout resets
+        if (phaseRef.current === "scene2_blackout" || phaseRef.current === "scene4_blackout") {
+          light.currentLight = 0.0;
+        } else {
+          light.currentLight += (light.targetLight - light.currentLight) * 0.065;
+        }
+
+        if (light.currentLight > 0.03) {
+          const lx = toScreenX(light.nx);
+          const ly = toScreenY(light.ny);
+          const lSize = light.size;
+
+          ctx.save();
+          ctx.translate(lx, ly);
+
+          if (light.type === "church") {
+            // Glowing church windows with bloom
+            ctx.shadowBlur = 12 * light.currentLight;
+            ctx.shadowColor = "rgba(251, 146, 60, 0.95)";
+            ctx.fillStyle = `rgba(251, 146, 60, ${light.currentLight})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, lSize * light.currentLight, 0, Math.PI, true);
+            ctx.lineTo(lSize * light.currentLight, lSize * 0.8);
+            ctx.lineTo(-lSize * light.currentLight, lSize * 0.8);
+            ctx.closePath();
+            ctx.fill();
+          } 
+          else if (light.type === "streetlamp" || light.type === "bridge") {
+            // Lamp post bulbs with high glow bloom
+            ctx.shadowBlur = 15 * light.currentLight;
+            ctx.shadowColor = light.isPart3 ? "rgba(254, 240, 138, 0.95)" : "rgba(251, 191, 36, 0.9)";
+            ctx.fillStyle = light.isPart3 ? `rgba(254, 240, 138, ${light.currentLight})` : `rgba(251, 191, 36, ${light.currentLight})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, lSize * (0.8 + 0.3 * light.currentLight), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tiny glass bulb core
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(0, 0, lSize * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+          } 
+          else if (light.type === "window") {
+            // House windows
+            ctx.shadowBlur = 9 * light.currentLight;
+            ctx.shadowColor = light.isBrightest ? "rgba(249, 115, 22, 0.9)" : "rgba(251, 191, 36, 0.95)";
+            ctx.fillStyle = light.isBrightest ? `rgba(249, 115, 22, ${light.currentLight})` : `rgba(251, 191, 36, ${light.currentLight})`;
+            ctx.fillRect(-lSize * 0.5, -lSize * 0.5, lSize, lSize);
+          } 
+          else if (light.type === "fairy" || light.type === "garden") {
+            // Little fairy light dots
+            ctx.shadowBlur = 8 * light.currentLight;
+            ctx.shadowColor = light.isPart3 ? "rgba(253, 224, 71, 0.95)" : "rgba(251, 191, 36, 0.9)";
+            ctx.fillStyle = light.isPart3 ? `rgba(253, 224, 71, ${light.currentLight})` : `rgba(251, 191, 36, ${light.currentLight})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, lSize * (0.9 + 0.2 * light.currentLight), 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+      });
+
+      // 12. Fireflies
       firefliesRef.current.forEach(f => {
         f.x += f.vx;
         f.y += f.vy;
-        f.vx += (Math.random() - 0.5) * 0.0001;
-        f.vy += (Math.random() - 0.5) * 0.0001;
+        f.vx += (Math.random() - 0.5) * 0.00012;
+        f.vy += (Math.random() - 0.5) * 0.00012;
         
         if (f.x < 0) f.x = 1.0;
         if (f.x > 1.0) f.x = 0;
@@ -1098,7 +1386,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         if (f.y > 1.0) f.y = 0.3;
 
         f.pulsePhase += f.pulseSpeed;
-        const currentAlpha = Math.max(0.1, Math.min(1.0, f.alpha + Math.sin(f.pulsePhase) * 0.45));
+        const currentAlpha = Math.max(0.1, Math.min(1.0, f.alpha + Math.sin(f.pulsePhase) * 0.4));
 
         ctx.fillStyle = `rgba(180, 240, 60, ${currentAlpha * 0.85})`;
         ctx.shadowBlur = 8 * currentAlpha;
@@ -1109,7 +1397,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.shadowBlur = 0;
       });
 
-      // 11. Sparkles
+      // 13. Sparkles
       sparklesRef.current.forEach(sp => {
         sp.x += sp.vx;
         sp.y += sp.vy;
@@ -1130,7 +1418,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.shadowBlur = 0;
       });
 
-      // 12. Fireworks
+      // 14. Fireworks
       if (phaseRef.current === "scene6_celebration") {
         if (Math.random() < 0.035 && fireworksRef.current.length < 5) {
           const fx = 0.2 + Math.random() * 0.6;
@@ -1188,7 +1476,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       // Zoom-to-moon screen fadeout
       if (phaseRef.current === "scene10_fade_moon") {
         const elapsed = tNow - phaseStartTimeRef.current;
-        const progress = Math.min(1.0, elapsed / 3000);
+        const progress = Math.min(1.0, elapsed / 4000);
         ctx.fillStyle = `rgba(0, 0, 0, ${progress})`;
         ctx.fillRect(0, 0, w, h);
       }
@@ -1241,7 +1529,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       {/* Cinematic background canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full pointer-events-none z-0" />
 
-      {/* Audio initialization hint overlay (Fades out automatically after 4s or on first click) */}
+      {/* Audio initialization hint overlay */}
       <AnimatePresence>
         {audioHintVisible && isPlaying && (
           <motion.div
@@ -1249,9 +1537,9 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             animate={{ opacity: 0.8, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.0 }}
-            className="absolute top-8 z-50 pointer-events-none rounded-full border border-white/10 bg-black/45 px-5 py-2 text-xs font-semibold text-white/80 backdrop-blur-sm"
+            className="absolute top-8 z-50 pointer-events-none rounded-full border border-white/10 bg-black/45 px-5 py-2 text-xs font-semibold text-white/80 backdrop-blur-sm animate-pulse"
           >
-            🎵 Tap anywhere to enable night music & bells
+            🎵 Tap anywhere to enable cinematic ambient music & bells
           </motion.div>
         )}
       </AnimatePresence>
@@ -1266,14 +1554,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                 initial={{ opacity: 0, y: 15 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: -20 }} 
-                transition={{ duration: 1.2, ease: "easeOut" }} 
+                transition={{ duration: 1.5, ease: "easeOut" }} 
                 className="max-w-2xl"
               >
                 <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>
                   Tonight...
                 </h2>
                 <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>
-                  an entire village has a surprise for someone very special... ❤️
+                  an entire village has a surprise<br/>for someone truly special... ❤️
                 </h3>
               </motion.div>
             )}
@@ -1284,7 +1572,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                 animate={{ opacity: 1, scale: 1 }} 
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1.2, ease: "easeOut" }} 
-                className="p-8 rounded-[2rem] border border-white/10 bg-black/35 backdrop-blur-[2px] shadow-2xl max-w-xl"
+                className="p-8 rounded-[2rem] border border-white/10 bg-black/40 backdrop-blur-[2px] shadow-2xl max-w-xl"
               >
                 <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">✨❤️</span>
                 <h1 className={`${playfair.className} text-4.5xl font-black md:text-6xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 mt-2`}>
@@ -1305,7 +1593,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.5, ease: "easeOut", delay: 0.8 }} 
+                transition={{ duration: 1.8, ease: "easeOut", delay: 0.8 }} 
                 className="max-w-lg p-5"
               >
                 <p className={`${caveat.className} text-3.2xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.95)]`}>
@@ -1420,7 +1708,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
               </AnimatePresence>
             )}
 
-            {/* Back button (Only visible when letter is not open, to prevent overlapping) */}
+            {/* Back button */}
             {!letterOpened && (
               <motion.button
                 onClick={onClose}
