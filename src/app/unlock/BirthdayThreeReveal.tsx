@@ -434,24 +434,28 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       if (x >= 0.34) points4.push({ nx: x, ny: 0.56 });
     }
 
-    // Digit "3"
+    // Digit "3" (Thicker, double-row, smooth curved patterns)
     const cx3_top = 0.50;
     const cy3_top = 0.40;
-    const r3_top = 0.13;
-    for (let a = -Math.PI * 0.55; a <= Math.PI * 0.55; a += 0.09) {
-      points3.push({ nx: cx3_top + r3_top * Math.cos(a), ny: cy3_top + r3_top * Math.sin(a) });
+    // Concentric rings for top curve to add artistic thickness
+    for (const r of [0.125, 0.145]) {
+      for (let a = -Math.PI * 0.55; a <= Math.PI * 0.55; a += 0.08) {
+        points3.push({ nx: cx3_top + r * Math.cos(a), ny: cy3_top + r * Math.sin(a) });
+      }
     }
     const cx3_bot = 0.50;
     const cy3_bot = 0.62;
-    const r3_bot = 0.16;
-    for (let a = -Math.PI * 0.55; a <= Math.PI * 0.85; a += 0.08) {
-      points3.push({ nx: cx3_bot + r3_bot * Math.cos(a), ny: cy3_bot + r3_bot * Math.sin(a) });
+    // Concentric rings for bottom curve to add artistic thickness
+    for (const r of [0.155, 0.178]) {
+      for (let a = -Math.PI * 0.55; a <= Math.PI * 0.85; a += 0.07) {
+        points3.push({ nx: cx3_bot + r * Math.cos(a), ny: cy3_bot + r * Math.sin(a) });
+      }
     }
 
     const addPoints = (pointsList: { nx: number; ny: number }[], partName: "4" | "3") => {
       pointsList.forEach(pt => {
         const duplicate = houses.find(
-          h => Math.hypot(h.nx - pt.nx, h.ny - pt.ny) < 0.018
+          h => Math.hypot(h.nx - pt.nx, h.ny - pt.ny) < 0.016
         );
         if (duplicate) {
           if (partName === "4") duplicate.isPart4 = true;
@@ -459,8 +463,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         } else {
           let type: "house" | "cottage" | "church" | "lamp" = "house";
           const roll = Math.random();
-          if (roll < 0.10) type = "lamp";
-          else if (roll < 0.25) type = "cottage";
+          if (partName === "3") {
+            // High ratio of streetlamps to blend warm house windows with glowing street lamps
+            if (roll < 0.28) type = "lamp";
+            else if (roll < 0.45) type = "cottage";
+          } else {
+            if (roll < 0.10) type = "lamp";
+            else if (roll < 0.25) type = "cottage";
+          }
 
           houses.push({
             id: houseIdCounter++,
@@ -941,14 +951,21 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             break;
           case "scene6_celebration":
           case "final_reveal":
-            house.targetLight = 1.0;
+            if (house.isPart3) {
+              house.targetLight = 1.0;
+            } else {
+              // Slowly fade in non-digit houses to a soft, warm ambient light, keeping the 3 highlighted
+              const elapsed = (tNow - phaseStartTimeRef.current) * 0.00015;
+              house.targetLight = Math.min(0.38, elapsed) + 0.04 * Math.sin(tNow * 0.0016 + house.pulseOffset);
+            }
             break;
           case "scene8_one_light":
           case "scene9_quote":
             if (house.isBrightest) {
               house.targetLight = 1.0;
             } else {
-              house.targetLight = Math.max(0, house.currentLight - 0.015);
+              // Let all other lights decay down. This naturally blends the number 3 back into the village as they all dim.
+              house.targetLight = Math.max(0, house.currentLight - 0.012);
             }
             break;
           case "scene10_fade_moon":
