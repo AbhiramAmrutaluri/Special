@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Heart, Sparkles, Volume2, VolumeX, RefreshCw } from "lucide-react";
+import { X, Heart, Sparkles, Volume2, VolumeX, RefreshCw, Play, Square, SkipForward, Mail, Sparkle, CircleDot, Castle, Film, Gift, Milestone } from "lucide-react";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Playfair_Display, Caveat } from "next/font/google";
 
@@ -103,10 +103,10 @@ class MountainVillageSynth {
 
     // Cinematic chords progression: Cmaj9, Gsus4, Am9, Fmaj7
     const chords = [
-      [130.81, 196.00, 261.63, 329.63, 392.00, 493.88], // Cmaj9 (C3, G3, C4, E4, G4, B4)
-      [146.83, 220.00, 293.66, 392.00, 440.00, 587.33], // Gsus4 (D3, A3, D4, G4, A4, D5)
-      [110.00, 220.00, 293.66, 349.23, 440.00, 587.33], // Am9 (A2, A3, D4, F4, A4, D5)
-      [174.61, 261.63, 349.23, 440.00, 523.25, 659.25]  // Fmaj7 (F3, C4, F4, A4, C5, E5)
+      [130.81, 196.00, 261.63, 329.63, 392.00, 493.88], // Cmaj9
+      [146.83, 220.00, 293.66, 392.00, 440.00, 587.33], // Gsus4
+      [110.00, 220.00, 293.66, 349.23, 440.00, 587.33], // Am9
+      [174.61, 261.63, 349.23, 440.00, 523.25, 659.25]  // Fmaj7
     ];
 
     let currentChord = 0;
@@ -117,7 +117,7 @@ class MountainVillageSynth {
       const chordDuration = 9.0;
 
       notes.forEach((freq, i) => {
-        const delay = i * 0.25; // Staggered arpeggiation
+        const delay = i * 0.25;
         const volume = i === 0 ? 0.35 : 0.20;
         this.playTone(freq, now + delay, chordDuration - delay, volume);
       });
@@ -137,9 +137,8 @@ class MountainVillageSynth {
     // Play 3 bell chimes staggered by 2.2 seconds
     for (let toll = 0; toll < 3; toll++) {
       const startTime = now + toll * 2.2;
-      const baseFreq = 164.81; // E3 note for deep spiritual resonance
+      const baseFreq = 164.81; // E3 note
       
-      // Church bell harmonics
       const partials = [
         { ratio: 1.0, vol: 0.30 },
         { ratio: 2.0, vol: 0.15 },
@@ -157,12 +156,9 @@ class MountainVillageSynth {
         osc.frequency.value = baseFreq * partial.ratio;
 
         gainNode.gain.setValueAtTime(0, startTime);
-        // Instant ring attack
         gainNode.gain.linearRampToValueAtTime(partial.vol * 0.3, startTime + 0.05);
-        // Slow exponential ringing decay
         gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + 6.0);
 
-        // Simple distortion to add warm metal character
         const shaper = this.ctx!.createWaveShaper();
         const makeDistortionCurve = (amount = 20) => {
           const k = typeof amount === "number" ? amount : 50;
@@ -203,6 +199,7 @@ interface BirthdayThreeRevealProps {
 }
 
 type Phase =
+  | "dashboard"
   | "opening"
   | "scene1_breathing"
   | "scene2_blackout"
@@ -211,18 +208,20 @@ type Phase =
   | "scene5_number3"
   | "scene6_celebration"
   | "final_reveal"
-  | "emotional_ending"
+  | "scene8_one_light"
+  | "scene9_quote"
+  | "scene10_fade_moon"
   | "interactive_chest";
 
 interface House {
   id: number;
-  nx: number; // Normalized x coordinate (0.0 to 1.0)
-  ny: number; // Normalized y coordinate (0.0 to 1.0)
+  nx: number;
+  ny: number;
   isPart4: boolean;
   isPart3: boolean;
   isBrightest: boolean;
-  currentLight: number; // 0.0 to 1.0
-  targetLight: number; // 0.0 to 1.0
+  currentLight: number;
+  targetLight: number;
   pulseOffset: number;
   type: "house" | "cottage" | "church" | "lamp";
   sizeMultiplier: number;
@@ -288,18 +287,28 @@ interface FloatingSparkle {
   twinkleSpeed: number;
 }
 
+interface SceneCard {
+  id: number;
+  phase: Phase;
+  title: string;
+  desc: string;
+  duration: number;
+  previewBg: string; // Tailwind gradient classes
+  previewIcon: string; // Emoji
+}
+
 export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProps) {
-  const [phase, setPhase] = useState<Phase>("opening");
+  const [phase, setPhase] = useState<Phase>("dashboard");
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [chestOpened, setChestOpened] = useState(false);
   const [letterOpened, setLetterOpened] = useState(false);
   const [chestDissolved, setChestDissolved] = useState(false);
-  const [triggerReplay, setTriggerReplay] = useState(0);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [totalPlaybackDuration, setTotalPlaybackDuration] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const synthRef = useRef<MountainVillageSynth | null>(null);
-  const phaseRef = useRef<Phase>("opening");
-  const phaseStartTimeRef = useRef(Date.now());
+  const phaseRef = useRef<Phase>("dashboard");
   
   // Custom camera properties
   const cameraRef = useRef({
@@ -321,6 +330,8 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
   const animationFrameIdRef = useRef<number | null>(null);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
+  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const phaseStartTimeRef = useRef(Date.now());
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -347,14 +358,108 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     }
   };
 
-  // Generate house array structure and star fields
+  // 10 cinematic scenes configuration
+  const scenes: SceneCard[] = [
+    {
+      id: 1,
+      phase: "scene1_breathing",
+      title: "VILLAGE ALIVE",
+      desc: "The drone camera slowly flies over the glowing village. House lights and street lamps gently pulse together as if the entire village has a heartbeat.",
+      duration: 6,
+      previewBg: "from-slate-950 via-indigo-950 to-slate-900",
+      previewIcon: "🏡",
+    },
+    {
+      id: 2,
+      phase: "scene2_blackout",
+      title: "SUDDEN BLACKOUT",
+      desc: "Without warning, a complete power cut happens. Everything goes dark instantly. Only the moon and twinkling stars illuminate the quiet rooftops.",
+      duration: 2,
+      previewBg: "from-black via-slate-950 to-black",
+      previewIcon: "⚡",
+    },
+    {
+      id: 3,
+      phase: "scene3_number4",
+      title: "NUMBER 4 FORMS",
+      desc: "One tiny house begins glowing, then another. Street by street, the warm wave of lights travels across the village to form a giant glowing number 4.",
+      duration: 8,
+      previewBg: "from-indigo-950 via-slate-900 to-amber-950/20",
+      previewIcon: "4️⃣",
+    },
+    {
+      id: 4,
+      phase: "scene4_blackout",
+      title: "DARKNESS RETURNS",
+      desc: "Another complete blackout occurs. The village fades back into dark silence, letting only the moonlight and moving clouds watch over the valley.",
+      duration: 2,
+      previewBg: "from-black via-slate-950 to-neutral-950",
+      previewIcon: "🌑",
+    },
+    {
+      id: 5,
+      phase: "scene5_number3",
+      title: "NUMBER 3 FORMS",
+      desc: "The lights awaken again, spreading diagonally in a new direction. All glowing houses together form a magnificent, giant glowing number 3.",
+      duration: 8,
+      previewBg: "from-indigo-950 via-slate-900 to-amber-900/10",
+      previewIcon: "3️⃣",
+    },
+    {
+      id: 6,
+      phase: "scene6_celebration",
+      title: "VILLAGE CELEBRATES",
+      desc: "Suddenly, every single house in the village lights up! Church bells toll, distant fireworks burst in the mountains, and fireflies dance everywhere.",
+      duration: 6,
+      previewBg: "from-purple-950 via-indigo-950 to-pink-950/30",
+      previewIcon: "🎆",
+    },
+    {
+      id: 7,
+      phase: "final_reveal",
+      title: "FINAL REVEAL",
+      desc: "An elegant titles layout slides in: '3 DAYS TO GO - An entire village lit up, just to celebrate the countdown to my Mammoty's birthday.'",
+      duration: 5,
+      previewBg: "from-slate-950 via-rose-950/40 to-slate-950",
+      previewIcon: "✨",
+    },
+    {
+      id: 8,
+      phase: "scene8_one_light",
+      title: "ONE LIGHT REMAINS",
+      desc: "The camera rises further. Every light slowly fades away except for one tiny house, which remains glowing warmly in the night.",
+      duration: 6,
+      previewBg: "from-slate-950 via-indigo-950/70 to-black",
+      previewIcon: "🕯️",
+    },
+    {
+      id: 9,
+      phase: "scene9_quote",
+      title: "EMOTIONAL ENDING",
+      desc: "The camera zooms deep into the single glowing window: 'No matter how many lights shine tonight, you'll always be the brightest one.'",
+      duration: 5,
+      previewBg: "from-[#080210] to-[#040108]",
+      previewIcon: "❤️",
+    },
+    {
+      id: 10,
+      phase: "scene10_fade_moon",
+      title: "FADE TO MOON",
+      desc: "The camera floats upward, panning to center fully on the glowing full moon. The music fades out, ending this dreamlike story.",
+      duration: 3,
+      previewBg: "from-slate-950 via-sky-950/30 to-black",
+      previewIcon: "🌕",
+    },
+  ];
+
+  // Initialize background elements
   const initializeEntities = () => {
-    // 1. Stars (Static sky grid with randomized noise)
+    // 1. Stars
     const stars: Star[] = [];
     for (let i = 0; i < 220; i++) {
       stars.push({
         x: Math.random(),
-        y: Math.random() * 0.55, // Only in the sky region
+        y: Math.random() * 0.55,
         size: 0.6 + Math.random() * 1.6,
         alpha: 0.15 + Math.random() * 0.85,
         twinkleSpeed: 0.02 + Math.random() * 0.04,
@@ -410,37 +515,31 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     }
     sparklesRef.current = sparkles;
 
-    // 5. Generate Houses laying out "4", "3" and neutral valley elements.
+    // 5. Generate Houses
     const houses: House[] = [];
     let houseIdCounter = 0;
 
-    // Define shapes mathematically in normalized coordinate spaces centered at (0.52, 0.52)
     const points4: { nx: number; ny: number }[] = [];
     const points3: { nx: number; ny: number }[] = [];
 
-    // Digit "4" layout coords
-    // Vertical stem: nx = 0.58, ny = 0.28 to 0.76 (approx 20 houses)
+    // Digit "4"
     for (let y = 0.30; y <= 0.74; y += 0.024) {
       points4.push({ nx: 0.58, ny: y });
     }
-    // Diagonal left: from (0.58, 0.30) to (0.38, 0.56) (approx 12 houses)
     for (let t = 0; t <= 1; t += 0.08) {
       points4.push({ nx: 0.58 - t * 0.20, ny: 0.30 + t * 0.26 });
     }
-    // Horizontal cross: ny = 0.56, nx = 0.32 to 0.70 (approx 16 houses)
     for (let x = 0.34; x <= 0.70; x += 0.024) {
       points4.push({ nx: x, ny: 0.56 });
     }
 
-    // Digit "3" layout coords
-    // Top arc: center at (0.50, 0.40), radius 0.13, angle from -Math.PI*0.5 to Math.PI*0.5
+    // Digit "3"
     const cx3_top = 0.50;
     const cy3_top = 0.40;
     const r3_top = 0.13;
     for (let a = -Math.PI * 0.55; a <= Math.PI * 0.55; a += 0.09) {
       points3.push({ nx: cx3_top + r3_top * Math.cos(a), ny: cy3_top + r3_top * Math.sin(a) });
     }
-    // Bottom arc: center at (0.50, 0.62), radius 0.16, angle from -Math.PI*0.5 to Math.PI*0.8
     const cx3_bot = 0.50;
     const cy3_bot = 0.62;
     const r3_bot = 0.16;
@@ -448,10 +547,8 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       points3.push({ nx: cx3_bot + r3_bot * Math.cos(a), ny: cy3_bot + r3_bot * Math.sin(a) });
     }
 
-    // Add points into houses pool, checking for overlaps to merge them
     const addPoints = (pointsList: { nx: number; ny: number }[], partName: "4" | "3") => {
       pointsList.forEach(pt => {
-        // Check duplicate coordinates
         const duplicate = houses.find(
           h => Math.hypot(h.nx - pt.nx, h.ny - pt.ny) < 0.018
         );
@@ -459,7 +556,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           if (partName === "4") duplicate.isPart4 = true;
           if (partName === "3") duplicate.isPart3 = true;
         } else {
-          // Determine type (streetlamps at random junctions, standard cottage, church, etc.)
           let type: "house" | "cottage" | "church" | "lamp" = "house";
           const roll = Math.random();
           if (roll < 0.10) type = "lamp";
@@ -485,19 +581,18 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     addPoints(points4, "4");
     addPoints(points3, "3");
 
-    // Define the special "Mammoty brightest" house
-    // Center it beautifully, making it part of the digits overlapping junction
+    // "Mammoty brightest" house
     const brightestHouse = houses.find(
       h => h.isPart4 && h.isPart3 && Math.hypot(h.nx - 0.58, h.ny - 0.56) < 0.05
     ) || houses[Math.floor(houses.length / 2)];
     
     if (brightestHouse) {
       brightestHouse.isBrightest = true;
-      brightestHouse.sizeMultiplier = 1.6; // Render noticeably larger and warmer
+      brightestHouse.sizeMultiplier = 1.6;
       brightestHouse.type = "cottage";
     }
 
-    // Add a scenic church in the village
+    // Scenic church
     const churchHouse = houses.find(
       h => !h.isBrightest && h.ny > 0.45 && h.ny < 0.65 && (h.isPart4 || h.isPart3)
     );
@@ -506,7 +601,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       churchHouse.sizeMultiplier = 1.8;
     }
 
-    // 6. Fill with ~130 neutral background houses to create a lush, living valley
+    // Fill with background valley houses
     for (let count = 0; count < 130; count++) {
       let valid = false;
       let rx = 0, ry = 0;
@@ -514,10 +609,9 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
       while (!valid && tries < 80) {
         rx = 0.15 + Math.random() * 0.70;
-        ry = 0.35 + Math.random() * 0.52; // Valley slopes
+        ry = 0.35 + Math.random() * 0.52;
         tries++;
 
-        // Ensure it doesn't overlap digit outlines too closely
         const distToDigit = houses.reduce((min, h) => {
           return Math.min(min, Math.hypot(h.nx - rx, h.ny - ry));
         }, 1.0);
@@ -532,7 +626,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         const roll = Math.random();
         if (roll < 0.12) type = "lamp";
         else if (roll < 0.28) type = "cottage";
-        else if (roll < 0.30) type = "church"; // Rare cathedral in the landscape
+        else if (roll < 0.30) type = "church";
 
         houses.push({
           id: houseIdCounter++,
@@ -553,84 +647,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     housesRef.current = houses;
   };
 
-  // Timeline manager sequences
-  const runSequenceTimers = () => {
-    // Reset state & variables
-    timersRef.current.forEach(t => clearTimeout(t));
-    timersRef.current = [];
-    setChestOpened(false);
-    setLetterOpened(false);
-    setChestDissolved(false);
-    fireworksRef.current = [];
-
-    const delay = (fn: () => void, ms: number) => {
-      timersRef.current.push(setTimeout(fn, ms));
-    };
-
-    // Begin sequence flow
-    setPhase("opening");
-
-    // Scene 1: Heartbeat Breathing of the entire valley
-    delay(() => {
-      setPhase("scene1_breathing");
-    }, 4500);
-
-    // Scene 2: Power Cut
-    delay(() => {
-      setPhase("scene2_blackout");
-    }, 9500);
-
-    // Scene 3: Lights sweep in waves and form number "4"
-    delay(() => {
-      setPhase("scene3_number4");
-    }, 12500);
-
-    // Scene 4: Another Blackout
-    delay(() => {
-      setPhase("scene4_blackout");
-    }, 18500);
-
-    // Scene 5: Lights awaken to form "3"
-    delay(() => {
-      setPhase("scene5_number3");
-    }, 21000);
-
-    // Scene 6: Celebration lights, bells tolling, fireworks
-    delay(() => {
-      setPhase("scene6_celebration");
-      // Trigger church bell chimes synthesized on the fly
-      synthRef.current?.playChurchBells();
-    }, 28000);
-
-    // Final countdown text reveals
-    delay(() => {
-      setPhase("final_reveal");
-    }, 34000);
-
-    // Emotional zoom-in and fadeout
-    delay(() => {
-      setPhase("emotional_ending");
-    }, 41000);
-
-    // Prompt Interactive chest surprise
-    delay(() => {
-      setPhase("interactive_chest");
-    }, 50000);
-  };
-
   useEffect(() => {
     initializeEntities();
-    runSequenceTimers();
+  }, []);
 
-    return () => {
-      timersRef.current.forEach(t => clearTimeout(t));
-      if (animationFrameIdRef.current) {
-        cancelAnimationFrame(animationFrameIdRef.current);
-      }
-    };
-  }, [triggerReplay]);
-
-  // Main canvas animation and drone movement math
+  // Main Canvas Rendering Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -649,14 +670,18 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     window.addEventListener("resize", handleResize);
 
     const animationLoop = () => {
+      if (phaseRef.current === "dashboard") {
+        animationFrameIdRef.current = requestAnimationFrame(animationLoop);
+        return;
+      }
+
       const w = window.innerWidth;
       const h = window.innerHeight;
       const tNow = Date.now();
 
-      // Clear canvas
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Draw Sky Background Gradient (Deep midnight romantic scene)
+      // 1. Draw Sky Background Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, "#020205");
       skyGrad.addColorStop(0.35, "#0b0c1b");
@@ -665,7 +690,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Stars Twinkling & Rendering
+      // 2. Stars
       starsRef.current.forEach(star => {
         star.twinklePhase += star.twinkleSpeed;
         const currentAlpha = Math.max(0.1, Math.min(1.0, star.alpha + Math.sin(star.twinklePhase) * 0.35));
@@ -675,12 +700,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.fill();
       });
 
-      // 3. Moon (Soft, cinematic glowing circle)
+      // 3. Moon
       const moonX = w * 0.82;
       const moonY = h * 0.18;
       const moonR = Math.min(w, h) * 0.075;
 
-      // Outer moon radial glow
       const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 3.2);
       moonGlow.addColorStop(0, "rgba(255, 252, 243, 0.85)");
       moonGlow.addColorStop(0.15, "rgba(255, 250, 230, 0.35)");
@@ -691,16 +715,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.arc(moonX, moonY, moonR * 3.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw solid moon disc
       ctx.fillStyle = "#fffdf5";
       ctx.shadowBlur = 20;
       ctx.shadowColor = "rgba(255, 253, 240, 0.65)";
       ctx.beginPath();
       ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0; // Reset shadow
+      ctx.shadowBlur = 0;
 
-      // Moonlight craters/shadows details
       ctx.fillStyle = "rgba(238, 230, 204, 0.3)";
       ctx.beginPath();
       ctx.arc(moonX - moonR * 0.3, moonY + moonR * 0.2, moonR * 0.25, 0, Math.PI * 2);
@@ -708,23 +730,21 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.arc(moonX + moonR * 0.4, moonY + moonR * 0.1, moonR * 0.18, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Drifting clouds in front of the moon
+      // 4. Clouds
       cloudsRef.current.forEach(cloud => {
         cloud.x += cloud.speed;
-        if (cloud.x > 1.2) cloud.x = -0.3; // loop clouds around
-
+        if (cloud.x > 1.2) cloud.x = -0.3;
         const cx = cloud.x * w;
         const cy = cloud.y * h;
         const cw = cloud.width * w;
         const ch = cloud.height * h;
-
         ctx.fillStyle = `rgba(224, 231, 255, ${cloud.alpha})`;
         ctx.beginPath();
         ctx.ellipse(cx, cy, cw, ch, 0, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // 5. Update Drone Camera Coordinates based on active phase
+      // 5. Camera Drone math
       const cam = cameraRef.current;
       switch (phaseRef.current) {
         case "opening":
@@ -767,50 +787,49 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           cam.targetX = 0;
           cam.targetY = -h * 0.05;
           break;
-        case "emotional_ending":
-          // Find the special Mammoty's brightest house to zoom in on it
+        case "scene8_one_light":
           const bHouse = housesRef.current.find(h => h.isBrightest);
           if (bHouse) {
             const baseScale = Math.min(w, h) * 0.9;
             const houseSX = w / 2 + (bHouse.nx - 0.5) * baseScale;
             const houseSY = h / 2 + (bHouse.ny - 0.5) * baseScale;
-            
+            cam.targetScale = 2.4;
+            cam.targetX = w / 2 - houseSX * 2.4;
+            cam.targetY = h / 2 - houseSY * 2.4;
+          }
+          break;
+        case "scene9_quote":
+          const bHouseQ = housesRef.current.find(h => h.isBrightest);
+          if (bHouseQ) {
+            const baseScale = Math.min(w, h) * 0.9;
+            const houseSX = w / 2 + (bHouseQ.nx - 0.5) * baseScale;
+            const houseSY = h / 2 + (bHouseQ.ny - 0.5) * baseScale;
             cam.targetScale = 3.6;
-            // Align screen center directly to this house
             cam.targetX = w / 2 - houseSX * 3.6;
             cam.targetY = h / 2 - houseSY * 3.6;
           }
           break;
-        case "interactive_chest":
-          cam.targetScale = 1.00;
-          cam.targetX = 0;
-          cam.targetY = -h * 0.02;
+        case "scene10_fade_moon":
+          cam.targetScale = 4.0;
+          cam.targetX = w / 2 - moonX * 4.0;
+          cam.targetY = h / 2 - moonY * 4.0;
           break;
       }
 
-      // Smooth camera interpolation (Lerp at 60 FPS)
-      cam.scale += (cam.targetScale - cam.scale) * 0.015;
-      cam.x += (cam.targetX - cam.x) * 0.015;
-      cam.y += (cam.targetY - cam.y) * 0.015;
+      cam.scale += (cam.targetScale - cam.scale) * 0.02;
+      cam.x += (cam.targetX - cam.x) * 0.02;
+      cam.y += (cam.targetY - cam.y) * 0.02;
 
-      // Apply camera transformation matrices
       ctx.save();
       ctx.translate(cam.x, cam.y);
       ctx.scale(cam.scale, cam.scale);
 
       const baseScale = Math.min(w, h) * 0.9;
-
-      // Helper function: Maps normalized village coordinates to screen pixels under the camera lens
       const toScreenX = (nx: number) => w / 2 + (nx - 0.5) * baseScale;
       const toScreenY = (ny: number) => h / 2 + (ny - 0.5) * baseScale;
 
-      // 6. Background Mountains Layers (overlapping silhouette hillsides)
-      const drawMountainRange = (
-        heightOffsets: number[],
-        baseY: number,
-        fillColor: string,
-        fogGrad: CanvasGradient
-      ) => {
+      // 6. Draw Mountains
+      const drawMountainRange = (heightOffsets: number[], baseY: number, fillColor: string, fogGrad: CanvasGradient) => {
         ctx.fillStyle = fillColor;
         ctx.beginPath();
         ctx.moveTo(0 - w * 0.5, h * 1.5);
@@ -824,71 +843,55 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.closePath();
         ctx.fill();
 
-        // Overlay soft fog behind the peaks
         ctx.fillStyle = fogGrad;
         ctx.fillRect(0 - w * 0.5, baseY - 0.15 * baseScale, w * 2.0, h);
       };
 
-      // Mountain 1 (Far peaks)
       const farMountainHeight = [0.22, 0.28, 0.20, 0.26, 0.35, 0.25, 0.18, 0.29, 0.33, 0.22, 0.26];
       const farFog = ctx.createLinearGradient(0, h * 0.25, 0, h * 0.5);
       farFog.addColorStop(0, "rgba(25, 23, 48, 0.0)");
       farFog.addColorStop(1, "rgba(9, 9, 21, 0.18)");
       drawMountainRange(farMountainHeight, h * 0.40, "#080816", farFog);
 
-      // Mountain 2 (Medium peaks)
       const midMountainHeight = [0.12, 0.17, 0.15, 0.09, 0.18, 0.22, 0.14, 0.19, 0.16, 0.11, 0.13];
       const midFog = ctx.createLinearGradient(0, h * 0.38, 0, h * 0.65);
       midFog.addColorStop(0, "rgba(25, 23, 48, 0.0)");
       midFog.addColorStop(1, "rgba(10, 10, 24, 0.25)");
       drawMountainRange(midMountainHeight, h * 0.52, "#0a0c1b", midFog);
 
-      // 7. Mountain Valley Winding River & Bridges
+      // 7. Winding River
       ctx.strokeStyle = "rgba(43, 85, 137, 0.35)";
       ctx.lineWidth = 4;
       ctx.shadowBlur = 8;
       ctx.shadowColor = "rgba(63, 142, 233, 0.3)";
       ctx.beginPath();
-      // River coordinates winding from top-middle down to bottom right
       ctx.moveTo(toScreenX(0.48), toScreenY(0.38));
-      ctx.quadraticCurveTo(
-        toScreenX(0.40), toScreenY(0.50),
-        toScreenX(0.53), toScreenY(0.65)
-      );
-      ctx.quadraticCurveTo(
-        toScreenX(0.68), toScreenY(0.80),
-        toScreenX(0.55), toScreenY(0.95)
-      );
+      ctx.quadraticCurveTo(toScreenX(0.40), toScreenY(0.50), toScreenX(0.53), toScreenY(0.65));
+      ctx.quadraticCurveTo(toScreenX(0.68), toScreenY(0.80), toScreenX(0.55), toScreenY(0.95));
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Moonlight reflections over river surfaces
       ctx.strokeStyle = "rgba(255, 253, 240, 0.3)";
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Stone bridge crosses
-      const drawBridge = (nx: number, ny: number) => {
-        const bx = toScreenX(nx);
-        const by = toScreenY(ny);
-        ctx.fillStyle = "#0c0a1a";
-        ctx.strokeStyle = "#25213b";
-        ctx.lineWidth = 2.5;
-        // Draw bridge arch
-        ctx.beginPath();
-        ctx.arc(bx, by, 16, Math.PI, 0);
-        ctx.fill();
-        ctx.stroke();
-        // Handrails
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-        ctx.beginPath();
-        ctx.moveTo(bx - 20, by - 6);
-        ctx.lineTo(bx + 20, by - 6);
-        ctx.stroke();
-      };
-      drawBridge(0.44, 0.52);
+      // Stone bridge
+      const bx = toScreenX(0.44);
+      const by = toScreenY(0.52);
+      ctx.fillStyle = "#0c0a1a";
+      ctx.strokeStyle = "#25213b";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(bx, by, 16, Math.PI, 0);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.beginPath();
+      ctx.moveTo(bx - 20, by - 6);
+      ctx.lineTo(bx + 20, by - 6);
+      ctx.stroke();
 
-      // 8. Pine trees scattered across fields
+      // 8. Pine trees
       const pineTrees = [
         { nx: 0.28, ny: 0.44 }, { nx: 0.32, ny: 0.48 }, { nx: 0.35, ny: 0.41 },
         { nx: 0.65, ny: 0.46 }, { nx: 0.69, ny: 0.41 }, { nx: 0.72, ny: 0.50 },
@@ -905,41 +908,27 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.lineTo(tx + 6, ty - 2);
         ctx.closePath();
         ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(tx, ty - 10);
-        ctx.lineTo(tx - 8, ty + 6);
-        ctx.lineTo(tx + 8, ty + 6);
-        ctx.closePath();
-        ctx.fill();
       });
 
-      // 9. Update & Render Houses light dynamics based on story progression
+      // 9. Update & Render Houses
       const houses = housesRef.current;
       houses.forEach(house => {
-        // Evaluate target light intensities per scene sequence rules
         switch (phaseRef.current) {
           case "opening":
-            // All fully lit during landing scene
             house.targetLight = 0.85;
             break;
           case "scene1_breathing":
-            // breathing like a heartbeat: pulses in unison
             const pulse = 0.45 + 0.55 * Math.sin(tNow * 0.0016 + house.pulseOffset);
             house.targetLight = pulse;
             break;
           case "scene2_blackout":
-            // Instant absolute power cut
             house.targetLight = 0.0;
             break;
           case "scene3_number4":
-            // Wave sweeps to form digit "4"
             if (house.isPart4) {
-              // Wave sweeps from left (nx=0) to right (nx=1)
-              const waveElapsed = (tNow - (phaseStartTimeRef.current + 12500)) * 0.0003;
-              const threshold = Math.min(1.1, waveElapsed); // sweep range
-              const waveOffset = house.nx;
-              if (threshold > waveOffset) {
+              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.0003;
+              const threshold = Math.min(1.1, waveElapsed);
+              if (threshold > house.nx) {
                 house.targetLight = 0.9 + 0.1 * Math.sin(tNow * 0.002 + house.pulseOffset);
               } else {
                 house.targetLight = 0.0;
@@ -949,17 +938,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             }
             break;
           case "scene4_blackout":
-            // Slow blackout: everything fades back into sleep
             house.targetLight = 0.0;
             break;
           case "scene5_number3":
-            // Wave sweeps in another direction (e.g. diagonally from top-left to bottom-right)
             if (house.isPart3) {
-              const waveElapsed = (tNow - (phaseStartTimeRef.current + 21000)) * 0.00028;
+              const waveElapsed = (tNow - (phaseStartTimeRef.current + 2000)) * 0.00028;
               const threshold = Math.min(1.5, waveElapsed);
-              const waveOffset = (house.nx + house.ny) / 2.0; // diagonal distance
+              const waveOffset = (house.nx + house.ny) / 2.0;
               if (threshold > waveOffset) {
-                // Breathing heartbeat pulse remains active
                 house.targetLight = 0.95 + 0.05 * Math.sin(tNow * 0.0018 + house.pulseOffset);
               } else {
                 house.targetLight = 0.0;
@@ -969,42 +955,28 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             }
             break;
           case "scene6_celebration":
-            // Entire village lights up brighter than ever
-            house.targetLight = 1.0;
-            break;
           case "final_reveal":
-            // Stays brightly lit
             house.targetLight = 1.0;
             break;
-          case "emotional_ending":
-            // Every light slowly fades except the Mammoty's brightest house
+          case "scene8_one_light":
+          case "scene9_quote":
             if (house.isBrightest) {
               house.targetLight = 1.0;
             } else {
-              // Smoothly decay to zero
               house.targetLight = Math.max(0, house.currentLight - 0.015);
             }
             break;
-          case "interactive_chest":
-            // Only Mammoty house remains glowing warmly
-            if (house.isBrightest) {
-              house.targetLight = 1.0;
-            } else {
-              house.targetLight = 0.0;
-            }
+          case "scene10_fade_moon":
+            house.targetLight = Math.max(0, house.currentLight - 0.02);
             break;
         }
 
-        // Apply smooth transition (lerp) from current intensity to target intensity
-        if (phaseRef.current === "scene2_blackout") {
-          // Instant power cut
+        if (phaseRef.current === "scene2_blackout" || phaseRef.current === "scene4_blackout") {
           house.currentLight = 0.0;
         } else {
-          // Normal soft transition
-          house.currentLight += (house.targetLight - house.currentLight) * 0.06;
+          house.currentLight += (house.targetLight - house.currentLight) * 0.065;
         }
 
-        // RENDER THE HOUSE SHAPES
         const hx = toScreenX(house.nx);
         const hy = toScreenY(house.ny);
         const hSize = 8.5 * house.sizeMultiplier;
@@ -1012,21 +984,17 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.save();
         ctx.translate(hx, hy);
 
-        // Draw cottage base / walls
         ctx.fillStyle = `rgba(${30 - Math.floor(house.currentLight * 10)}, ${38 - Math.floor(house.currentLight * 12)}, ${56 - Math.floor(house.currentLight * 16)}, 1.0)`;
         if (house.currentLight > 0.05) {
-          // Lit cottage walls
           ctx.fillStyle = `rgba(${135 + Math.floor(house.currentLight * 35)}, ${105 + Math.floor(house.currentLight * 25)}, ${90 + Math.floor(house.currentLight * 15)}, 1.0)`;
         }
 
         if (house.type === "church") {
-          // Draw Cathedral spire shape
           ctx.beginPath();
           ctx.rect(-hSize * 0.5, -hSize * 0.5, hSize, hSize);
           ctx.rect(-hSize * 0.22, -hSize * 1.5, hSize * 0.44, hSize);
           ctx.fill();
           
-          // Draw spire pyramid roof
           ctx.fillStyle = house.currentLight > 0.1 ? "#9c4033" : "#0d091a";
           ctx.beginPath();
           ctx.moveTo(0, -hSize * 2.3);
@@ -1035,7 +1003,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.closePath();
           ctx.fill();
 
-          // Small cross at top spire
           ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -1045,7 +1012,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.lineTo(hSize * 0.12, -hSize * 2.45);
           ctx.stroke();
 
-          // Stained glass window glow
           if (house.currentLight > 0.05) {
             ctx.shadowBlur = 12 * house.currentLight;
             ctx.shadowColor = "rgba(251, 146, 60, 0.85)";
@@ -1060,7 +1026,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           }
         } 
         else if (house.type === "lamp") {
-          // Draw Street lamp post
           ctx.strokeStyle = "#110f22";
           ctx.lineWidth = 2.0;
           ctx.beginPath();
@@ -1068,7 +1033,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.lineTo(0, -hSize * 0.4);
           ctx.stroke();
 
-          // Draw lamp sphere
           if (house.currentLight > 0.05) {
             ctx.shadowBlur = 14 * house.currentLight;
             ctx.shadowColor = "rgba(253, 224, 71, 0.95)";
@@ -1085,12 +1049,10 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           }
         } 
         else {
-          // Standard house shapes
           ctx.beginPath();
           ctx.rect(-hSize * 0.5, -hSize * 0.4, hSize, hSize * 0.8);
           ctx.fill();
 
-          // Triangular roof
           ctx.fillStyle = house.currentLight > 0.1 ? "#aa4d3d" : "#0d091f";
           ctx.beginPath();
           ctx.moveTo(0, -hSize * 0.85);
@@ -1099,17 +1061,14 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           ctx.closePath();
           ctx.fill();
 
-          // Glowing windows
           if (house.currentLight > 0.05) {
             ctx.shadowBlur = 10 * house.currentLight;
             ctx.shadowColor = "rgba(251, 191, 36, 0.9)";
             ctx.fillStyle = `rgba(251, 191, 36, ${house.currentLight})`;
 
-            // Draw window rectangles
             ctx.fillRect(-hSize * 0.28, -hSize * 0.15, hSize * 0.18, hSize * 0.18);
             ctx.fillRect(hSize * 0.1, -hSize * 0.15, hSize * 0.18, hSize * 0.18);
             
-            // Brightest house door glow
             if (house.isBrightest) {
               ctx.fillStyle = `rgba(249, 115, 22, ${house.currentLight})`;
               ctx.fillRect(-hSize * 0.1, hSize * 0.1, hSize * 0.2, hSize * 0.3);
@@ -1121,15 +1080,13 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.restore();
       });
 
-      // 10. Fireflies floating & pulsing
+      // 10. Fireflies
       firefliesRef.current.forEach(f => {
-        // Random walker noise
         f.x += f.vx;
         f.y += f.vy;
         f.vx += (Math.random() - 0.5) * 0.0001;
         f.vy += (Math.random() - 0.5) * 0.0001;
         
-        // Bounce off canvas boundaries
         if (f.x < 0) f.x = 1.0;
         if (f.x > 1.0) f.x = 0;
         if (f.y < 0.3) f.y = 0.95;
@@ -1147,7 +1104,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.shadowBlur = 0;
       });
 
-      // 11. Drifting Golden Sparkles particles
+      // 11. Sparkles
       sparklesRef.current.forEach(sp => {
         sp.x += sp.vx;
         sp.y += sp.vy;
@@ -1168,19 +1125,12 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.shadowBlur = 0;
       });
 
-      // 12. Distant Tiny Fireworks in the Mountains (Scene 6)
+      // 12. Fireworks
       if (phaseRef.current === "scene6_celebration") {
-        // Randomly launch new firework
         if (Math.random() < 0.035 && fireworksRef.current.length < 5) {
           const fx = 0.2 + Math.random() * 0.6;
           const fy = 0.2 + Math.random() * 0.22;
-          const colors = [
-            "rgba(244, 63, 94, ", // rose
-            "rgba(168, 85, 247, ", // purple
-            "rgba(251, 191, 36, ", // amber
-            "rgba(20, 184, 166, ", // teal
-            "rgba(255, 255, 255, "  // white
-          ];
+          const colors = ["rgba(244, 63, 94, ", "rgba(168, 85, 247, ", "rgba(251, 191, 36, ", "rgba(20, 184, 166, ", "rgba(255, 255, 255, "];
           const colorPrefix = colors[Math.floor(Math.random() * colors.length)];
 
           const particles: FireworkParticle[] = [];
@@ -1209,12 +1159,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         }
       }
 
-      // Update & Draw Fireworks particles
-      fireworksRef.current.forEach((fw, index) => {
+      fireworksRef.current.forEach((fw) => {
         fw.particles.forEach(p => {
           p.x += p.vx;
           p.y += p.vy;
-          p.vy += p.gravity; // Gravitational drift downwards
+          p.vy += p.gravity;
           p.alpha -= p.fadeSpeed;
 
           if (p.alpha > 0.0) {
@@ -1225,14 +1174,20 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           }
         });
 
-        // Filter out dead fireworks
         fw.particles = fw.particles.filter(p => p.alpha > 0.0);
       });
       fireworksRef.current = fireworksRef.current.filter(fw => fw.particles.length > 0);
 
-      ctx.restore(); // Restore camera matrices
+      ctx.restore();
 
-      // Request next frame
+      // Fade-out overlay when zooming into the moon in Scene 10
+      if (phaseRef.current === "scene10_fade_moon") {
+        const elapsed = tNow - phaseStartTimeRef.current;
+        const progress = Math.min(1.0, elapsed / 3000);
+        ctx.fillStyle = `rgba(0, 0, 0, ${progress * 0.92})`;
+        ctx.fillRect(0, 0, w, h);
+      }
+
       animationFrameIdRef.current = requestAnimationFrame(animationLoop);
     };
 
@@ -1246,11 +1201,87 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     };
   }, []);
 
-  // When letter is closed, spawn 180 star particles that float up
+  // Play animation sequence starting from a specific scene card index
+  const playCinematicFrom = (startSceneId: number) => {
+    // Initialize Web Audio context
+    if (synthRef.current) {
+      synthRef.current.init();
+      synthRef.current.setMute(!musicEnabled);
+    }
+
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+    if (playbackTimerRef.current) {
+      clearInterval(playbackTimerRef.current);
+    }
+
+    fireworksRef.current = [];
+    setChestOpened(false);
+    setLetterOpened(false);
+    setChestDissolved(false);
+
+    // Calculate total duration in seconds of remaining slides
+    let totalSecs = 0;
+    for (let i = startSceneId - 1; i < scenes.length; i++) {
+      totalSecs += scenes[i].duration;
+    }
+    setTotalPlaybackDuration(totalSecs);
+    setPlaybackTime(0);
+
+    // Setup active playback timer tick (updates playback bar)
+    const tickInterval = 100; // tick every 100ms
+    let elapsedMs = 0;
+    playbackTimerRef.current = setInterval(() => {
+      elapsedMs += tickInterval;
+      setPlaybackTime(Math.min(totalSecs, elapsedMs / 1000));
+    }, tickInterval);
+
+    // Helper to queue scenes
+    const queueScene = (sceneIndex: number, delayMs: number) => {
+      if (sceneIndex >= scenes.length) {
+        // Playback finished, return to dashboard or show chest
+        timersRef.current.push(
+          setTimeout(() => {
+            if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+            setPhase("interactive_chest");
+          }, delayMs)
+        );
+        return;
+      }
+
+      const scene = scenes[sceneIndex];
+      timersRef.current.push(
+        setTimeout(() => {
+          setPhase(scene.phase);
+          if (scene.phase === "scene6_celebration" && synthRef.current) {
+            synthRef.current.playChurchBells();
+          }
+          queueScene(sceneIndex + 1, scene.duration * 1000);
+        }, delayMs)
+      );
+    };
+
+    // First scene starts immediately
+    const firstScene = scenes[startSceneId - 1];
+    setPhase(firstScene.phase);
+    if (firstScene.phase === "scene6_celebration" && synthRef.current) {
+      synthRef.current.playChurchBells();
+    }
+    queueScene(startSceneId, firstScene.duration * 1000);
+  };
+
+  const stopPlayback = () => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+    if (playbackTimerRef.current) {
+      clearInterval(playbackTimerRef.current);
+    }
+    setPhase("dashboard");
+  };
+
+  // Close letter - trigger 180 stars ascent
   const triggerStarExplosion = () => {
     setLetterOpened(false);
-    
-    // Spawn 180 particles
     const list: FloatingSparkle[] = [];
     for (let i = 0; i < 180; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -1260,7 +1291,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         x: 0.5 + (Math.random() - 0.5) * 0.08,
         y: 0.45 + (Math.random() - 0.5) * 0.12,
         vx: Math.cos(angle) * speed * 0.002,
-        vy: -0.005 - Math.random() * 0.004, // Ascending velocities
+        vy: -0.005 - Math.random() * 0.004,
         size: 1.2 + Math.random() * 2.4,
         alpha: 1.0,
         color: i % 2 === 0 ? "rgba(255, 255, 255, 1.0)" : "rgba(251, 191, 36, 1.0)",
@@ -1269,246 +1300,507 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       });
     }
 
-    // Merge into sparkles list
     sparklesRef.current = [...sparklesRef.current, ...list];
-    
     setTimeout(() => {
       setChestDissolved(true);
     }, 1800);
   };
 
-  // Helper variables for timelines
-  const showOpening = phase === "opening";
-  const showUIReveal = phase === "final_reveal" || phase === "scene6_celebration";
-  const showEmotionalEnding = phase === "emotional_ending";
+  const isPlaying = phase !== "dashboard" && phase !== "interactive_chest";
+
+  // Active scene card styling in progress bar
+  const activeSceneName = useMemo(() => {
+    const matching = scenes.find(s => s.phase === phase);
+    return matching ? matching.title : "CINEMATIC SHOWCASE";
+  }, [phase]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-black text-white">
-      {/* Cinematic background canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full pointer-events-none" />
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#030208] text-amber-50 custom-scrollbar select-none">
+      
+      {/* Cinematic ambient canvas drawn in background */}
+      <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full pointer-events-none z-0" />
 
       {/* Floating speaker toggle */}
       <button
         onClick={toggleMusic}
-        className="absolute right-6 top-6 z-50 flex items-center justify-center rounded-full border border-white/35 bg-black/45 p-3.5 text-white/90 shadow-[0_0_15px_rgba(255,255,255,0.15)] backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:scale-105 active:scale-95 group cursor-pointer"
+        className="absolute right-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/30 bg-black/55 p-3 text-amber-200/90 shadow-[0_0_15px_rgba(251,191,36,0.1)] backdrop-blur-md transition hover:bg-amber-950/20 hover:scale-105 active:scale-95 cursor-pointer"
       >
         {musicEnabled ? (
-          <Volume2 className="h-6 w-6 animate-pulse text-amber-300" />
+          <Volume2 className="h-5 w-5 animate-pulse text-amber-300" />
         ) : (
-          <VolumeX className="h-6 w-6 text-white/70" />
+          <VolumeX className="h-5 w-5 text-amber-200/50" />
         )}
       </button>
 
-      {/* Close main scene option */}
+      {/* Close button to exit Day 3 */}
       <button
         onClick={onClose}
-        className="absolute left-6 top-6 z-50 flex items-center justify-center rounded-full border border-white/35 bg-black/45 p-3.5 text-white/90 shadow-[0_0_15px_rgba(255,255,255,0.15)] backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:scale-105 active:scale-95 cursor-pointer"
+        className="absolute left-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/30 bg-black/55 p-3 text-amber-200/90 shadow-[0_0_15px_rgba(251,191,36,0.1)] backdrop-blur-md transition hover:bg-amber-950/20 hover:scale-105 active:scale-95 cursor-pointer"
       >
-        <X className="h-6 w-6" />
+        <X className="h-5 w-5" />
       </button>
 
-      {/* Overlay: Opening Narrative Text */}
+      {/* RENDER FULLSCREEN MOVIE PLAYER */}
       <AnimatePresence>
-        {showOpening && (
+        {isPlaying && (
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            className="pointer-events-none absolute inset-x-8 top-[32%] z-30 flex flex-col items-center text-center select-none"
-          >
-            <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/95 md:text-5xl leading-relaxed max-w-2xl`}>
-              Tonight...
-            </h2>
-            <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed max-w-3xl`}>
-              an entire village has a surprise for someone very special... ❤️
-            </h3>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Overlay: Cinematic 3 Days To Go Titles */}
-      <AnimatePresence>
-        {showUIReveal && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            className="pointer-events-none absolute inset-x-8 bottom-[20%] z-30 flex flex-col items-center text-center select-none"
+            className="fixed inset-0 z-40 flex flex-col justify-between items-center pointer-events-none"
           >
-            <div className="flex flex-col items-center p-8 rounded-[2.5rem] border border-white/10 bg-black/25 backdrop-blur-[4px] shadow-[0_0_50px_rgba(0,0,0,0.4)]">
-              <span className="text-pink-400 text-3xl flex items-center gap-1.5 animate-pulse">
-                ✨❤️
-              </span>
-              <h1 className={`${playfair.className} text-5xl font-black md:text-7xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 drop-shadow-[0_4px_12px_rgba(251,191,36,0.3)] mt-2`}>
-                3 DAYS TO GO
-              </h1>
-              <span className="text-pink-400 text-3xl flex items-center gap-1.5 animate-pulse mt-2">
-                ❤️✨
-              </span>
-              
-              <p className={`${caveat.className} mt-5 max-w-lg text-2.5xl font-bold leading-relaxed text-amber-200/90 md:text-3.5xl`}>
-                "An entire village lit up...
-                just to celebrate the countdown
-                to my Mammoty's birthday. ❤️"
-              </p>
+            {/* Top black shroud vignette */}
+            <div className="w-full h-24 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-20 pointer-events-auto" />
+
+            {/* Cinematic subtitle subtitles */}
+            <div className="absolute inset-x-8 top-[30%] text-center flex flex-col items-center gap-4">
+              {phase === "opening" && (
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 1.0 }} className="max-w-2xl">
+                  <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>Tonight...</h2>
+                  <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>an entire village has a surprise for someone very special... ❤️</h3>
+                </motion.div>
+              )}
+
+              {phase === "final_reveal" && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.0 }} className="p-8 rounded-[2rem] border border-white/10 bg-black/35 backdrop-blur-[2px] shadow-2xl max-w-xl">
+                  <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">✨❤️</span>
+                  <h1 className={`${playfair.className} text-4.5xl font-black md:text-6xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 mt-2`}>3 DAYS TO GO</h1>
+                  <p className={`${caveat.className} mt-4 text-2xl font-bold leading-relaxed text-amber-200/90 md:text-3xl`}>"An entire village lit up... just to celebrate the countdown to my Mammoty's birthday. ❤️"</p>
+                </motion.div>
+              )}
+
+              {phase === "scene9_quote" && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2 }} className="max-w-lg p-5">
+                  <p className={`${caveat.className} text-3.5xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.9)]`}>"No matter how many lights shine tonight... you'll always be the brightest one. ❤️"</p>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Bottom playback details HUD */}
+            <div className="w-full p-8 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col gap-4 pointer-events-auto z-50">
+              <div className="max-w-5xl w-full mx-auto flex flex-col gap-2.5">
+                {/* Progress bar */}
+                <div className="w-full h-1.5 rounded-full bg-amber-900/30 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 transition-all duration-100 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+                    style={{ width: `${(playbackTime / totalPlaybackDuration) * 100}%` }}
+                  />
+                </div>
+
+                <div className="flex justify-between items-center text-xs md:text-sm font-semibold tracking-wider text-amber-200/70">
+                  <span className="flex items-center gap-2 text-amber-400">
+                    <Film className="h-4.5 w-4.5 animate-spin-slow" />
+                    <span>PLAYING SLIDE: {activeSceneName}</span>
+                  </span>
+                  <span>
+                    ⏱️ {playbackTime.toFixed(1)}s / {totalPlaybackDuration}s
+                  </span>
+                </div>
+
+                {/* Controller buttons */}
+                <div className="flex justify-between items-center mt-2.5">
+                  <button 
+                    onClick={stopPlayback}
+                    className="rounded-full border border-amber-900/40 bg-black/65 px-5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-900/20 transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Square size={12} fill="currentColor" />
+                    <span>Stop Cinematic</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      // Find next scene
+                      const currentIdx = scenes.findIndex(s => s.phase === phase);
+                      if (currentIdx !== -1 && currentIdx < scenes.length - 1) {
+                        playCinematicFrom(currentIdx + 2);
+                      } else {
+                        setPhase("interactive_chest");
+                      }
+                    }}
+                    className="rounded-full border border-amber-900/40 bg-black/65 px-5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-900/20 transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Skip Slide</span>
+                    <SkipForward size={12} fill="currentColor" />
+                  </button>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Overlay: Emotional Ending Single House Quote */}
+      {/* RENDER THE MAIN SHOWCASE STORYBOARD DASHBOARD */}
+      {phase === "dashboard" && (
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-20 flex flex-col gap-12 items-center">
+          
+          {/* Header Billboard Section */}
+          <div className="text-center flex flex-col items-center gap-4 max-w-4xl border-b border-amber-900/20 pb-10">
+            <span className="text-sm font-black uppercase tracking-widest text-amber-400/90 flex items-center gap-1.5">
+              <Sparkles size={16} className="animate-pulse" />
+              ✨ 3 Days To Go – Village Lights Countdown ✨
+              <Sparkles size={16} className="animate-pulse" />
+            </span>
+            
+            <h1 className={`${playfair.className} text-4.5xl sm:text-6.5xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 drop-shadow-[0_4px_15px_rgba(251,191,36,0.15)] mt-2`}>
+              3 DAYS TO GO
+            </h1>
+
+            <p className={`${caveat.className} text-2xl sm:text-3.5xl text-amber-200/95 font-bold max-w-2xl leading-relaxed`}>
+              "A cinematic story where an entire village comes together for someone truly special. ❤️"
+            </p>
+
+            <p className="text-sm sm:text-base leading-relaxed text-amber-100/60 max-w-3xl font-light">
+              A peaceful night in the mountains. The village is alive with warm lights, streets glowing, church bells silent, wind in the trees, fireflies in the air, and a heart full of love...
+            </p>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-4 items-center">
+              <button 
+                onClick={() => playCinematicFrom(1)}
+                className="relative overflow-hidden rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-10 py-4 shadow-[0_0_35px_rgba(251,191,36,0.35)] hover:scale-105 active:scale-95 transition-all text-amber-950 font-extrabold flex items-center gap-2 cursor-pointer group"
+              >
+                <Play size={16} fill="currentColor" />
+                <span className="tracking-wide text-base">Play Cinematic Story (45s)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 10-Step Storyboard Grid Showcase */}
+          <div className="w-full flex flex-col gap-6">
+            <div className="flex items-center gap-2 border-b border-amber-900/10 pb-3">
+              <Milestone className="h-5 w-5 text-amber-400" />
+              <h2 className={`${playfair.className} text-xl tracking-wider text-amber-200/90 font-bold uppercase`}>
+                The Cinematic Storyboard Sequence
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 w-full">
+              {scenes.map((scene) => (
+                <motion.div
+                  key={scene.id}
+                  onClick={() => playCinematicFrom(scene.id)}
+                  whileHover={{ y: -6, scale: 1.02 }}
+                  className="rounded-2xl border border-amber-900/35 bg-black/45 p-4 flex flex-col justify-between gap-4 cursor-pointer hover:border-amber-400/50 shadow-lg hover:shadow-[0_12px_24px_rgba(251,191,36,0.08)] transition duration-300 group"
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Scene styled thumbnail preview */}
+                    <div className={`relative h-28 rounded-xl bg-gradient-to-br ${scene.previewBg} border border-amber-900/30 overflow-hidden flex items-center justify-center text-4xl shadow-inner group-hover:border-amber-400/30 transition`}>
+                      {/* Grid background mesh overlay */}
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(0,0,0,0.7))] pointer-events-none" />
+                      <span className="relative z-10 filter drop-shadow-md select-none group-hover:scale-110 transition duration-300">{scene.previewIcon}</span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-400/70">SCENE 0{scene.id}</span>
+                      <h3 className={`${playfair.className} text-sm font-black text-amber-200 uppercase mt-0.5 tracking-wider group-hover:text-amber-300 transition`}>
+                        {scene.title}
+                      </h3>
+                    </div>
+
+                    <p className="text-[11px] leading-relaxed text-amber-100/50 group-hover:text-amber-100/70 transition font-light max-h-20 overflow-hidden text-ellipsis">
+                      {scene.desc}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between items-center border-t border-amber-900/10 pt-2.5 text-[10px] font-bold text-amber-200/50 group-hover:text-amber-200/80 transition">
+                    <span>🎬 CHAPTER 0{scene.id}</span>
+                    <span className="bg-amber-900/30 px-2 py-0.5 rounded-full text-amber-400">⏱️ {scene.duration}s</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom detail layouts: Final Message, Surprise trigger, Visual parameters */}
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch border-t border-amber-900/20 pt-10">
+            
+            {/* Column 1: Final Message card */}
+            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
+              <div className="flex flex-col gap-3">
+                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Final Message Presentation</span>
+                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
+                  ✨ 3 DAYS TO GO ✨
+                </h3>
+                <div className="h-[1px] w-full bg-amber-900/10" />
+                <p className={`${caveat.className} text-2.5xl leading-relaxed text-amber-100 font-bold mt-2`}>
+                  "An entire village lit up...<br/>
+                  just to celebrate the countdown<br/>
+                  to my Mammoty's birthday. ❤️"
+                </p>
+              </div>
+
+              <div className="text-[10px] font-semibold text-amber-200/40">
+                🔒 Custom Countdown Stage Display
+              </div>
+            </div>
+
+            {/* Column 2: Interactive surprise card details */}
+            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
+              <div className="flex flex-col gap-3">
+                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Interactive Secret surprise</span>
+                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
+                  🎁 Open My Little Secret
+                </h3>
+                <div className="h-[1px] w-full bg-amber-900/10" />
+                
+                {/* 5-step chest icon grid */}
+                <div className="grid grid-cols-5 gap-1.5 mt-2">
+                  {[
+                    { label: "1. Click Open", icon: "🎁" },
+                    { label: "2. Golden Glow", icon: "🌟" },
+                    { label: "3. Letter Rises", icon: "✉️" },
+                    { label: "4. Unfolds", icon: "📜" },
+                    { label: "5. Stars Fly", icon: "✨" }
+                  ].map((step, i) => (
+                    <div key={i} className="flex flex-col items-center text-center p-1 rounded bg-amber-950/20 border border-amber-900/20">
+                      <span className="text-lg">{step.icon}</span>
+                      <span className="text-[8px] leading-tight text-amber-200/50 mt-1 select-none font-semibold">{step.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[11px] leading-relaxed text-amber-100/50 mt-2 font-light">
+                  A vintage treasure chest opens with golden glow, bringing a floating crystal and handwritten custom message letter. When closed, it converts into a star shower!
+                </p>
+              </div>
+
+              <button
+                onClick={() => setPhase("interactive_chest")}
+                className="w-full rounded-2xl bg-amber-900/20 hover:bg-amber-900/35 border border-amber-700/40 py-3 shadow text-xs font-black uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Gift size={14} />
+                <span>Open Secret Chest Surprise</span>
+              </button>
+            </div>
+
+            {/* Column 3: Background specs list */}
+            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
+              <div className="flex flex-col gap-3">
+                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Cinematic Specs Checklist</span>
+                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
+                  Atmospheric FX
+                </h3>
+                <div className="h-[1px] w-full bg-amber-900/10" />
+
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-amber-200/60 mt-1">
+                  {[
+                    "✨ Twinkling stars",
+                    "🌕 Full moon glow",
+                    "☁️ Drifting clouds",
+                    "🌫️ Mountain fog",
+                    "🌲 Pine tree slopes",
+                    "🐝 Living fireflies",
+                    "✨ Golden dust",
+                    "🔔 Church chimes",
+                    "🎥 Drone camera pan",
+                    "🎆 Tiny fireworks"
+                  ].map((fx, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-amber-950/10 border border-amber-900/10 px-2 py-1 rounded">
+                      <span>{fx}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-[10px] font-semibold text-amber-200/40 flex justify-between items-center">
+                <span>⚡ GPU ACCELERATED 60 FPS</span>
+                <span>🏰 PIXAR STYLE</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Technology Specifications bottom footer banner */}
+          <div className="w-full rounded-3xl border border-amber-900/20 bg-black/25 p-5 text-center flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-amber-200/50">
+            <span className="flex items-center gap-1">
+              <CircleDot size={12} className="text-amber-400" />
+              <span>Next.js App Router + TypeScript + Tailwind CSS + Framer Motion</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <Castle size={12} className="text-amber-400" />
+              <span>Disney/Pixar cinematic countdown page presentation</span>
+            </span>
+          </div>
+
+        </div>
+      )}
+
+      {/* RENDER THE CHEST MODAL DIRECTLY FROM DASHBOARD STATE */}
       <AnimatePresence>
-        {showEmotionalEnding && (
+        {phase === "interactive_chest" && !chestDissolved && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/85 backdrop-blur-md">
+            
+            {/* Close button to return to dashboard */}
+            <button
+              onClick={() => setPhase("dashboard")}
+              className="absolute right-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/35 bg-black/45 p-3 text-white/90 transition hover:bg-white/10 active:scale-95 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-center gap-6"
+            >
+              {!chestOpened ? (
+                <div className="flex flex-col items-center gap-6">
+                  <motion.div 
+                    className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                  >
+                    <span className={`${playfair.className} font-bold text-amber-950 text-base tracking-wide flex items-center gap-2`}>
+                      🎁 Open My Little Secret
+                    </span>
+                  </motion.div>
+
+                  <button
+                    onClick={() => setChestOpened(true)}
+                    className="relative group cursor-pointer w-48 h-40 hover:scale-105 transition duration-300 focus:outline-none"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-amber-800 to-amber-950 rounded-2xl border-4 border-amber-900 shadow-2xl flex flex-col justify-end p-1">
+                      <div className="absolute left-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
+                      <div className="absolute right-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-600 flex items-center justify-center">
+                        <div className="w-2 h-4 bg-black rounded" />
+                      </div>
+                    </div>
+                    <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-amber-700 to-amber-800 rounded-t-2xl border-x-4 border-t-4 border-amber-900 flex items-center justify-between px-6 shadow-md transition duration-300 group-hover:-translate-y-1">
+                      <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
+                      <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  {!letterOpened ? (
+                    <motion.div
+                      key="crystal"
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col items-center gap-6"
+                    >
+                      <div className="relative flex items-center justify-center h-48 w-48">
+                        <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
+                        <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
+                        
+                        <motion.div
+                          animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
+                          transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+                          onClick={() => setLetterOpened(true)}
+                          className="cursor-pointer relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-yellow-400 shadow-[0_0_35px_rgba(251,191,36,0.85)] border border-amber-100"
+                        >
+                          <Sparkles className="h-10 w-10 text-amber-950 animate-pulse" />
+                        </motion.div>
+                      </div>
+
+                      <button
+                        onClick={() => setLetterOpened(true)}
+                        className="rounded-full bg-white/20 px-8 py-3.5 border border-white/35 backdrop-blur-md hover:bg-white/35 transition-all text-white font-bold cursor-pointer"
+                      >
+                        ✨ Read the secret note ✨
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="handwritten-letter"
+                      initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.85, y: -40 }}
+                      transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                      className="relative max-w-md w-[92vw] rounded-[2rem] border-[3px] border-amber-900/60 bg-[#faf6ea] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.8)] text-amber-950 flex flex-col gap-6"
+                    >
+                      <div className="absolute top-4 right-4 text-xs font-bold text-amber-800/40 select-none">
+                        🔒 CONFIDENTIAL
+                      </div>
+
+                      <div className="overflow-y-auto max-h-[60vh] pr-2">
+                        <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed`}>
+                          {SECRET_MESSAGE}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={triggerStarExplosion}
+                        className="relative overflow-hidden w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition hover:scale-[1.02] active:scale-95 cursor-pointer"
+                      >
+                        Close my secret ❤️
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Replay and Return to Dashboard option on finished letter closing */}
+      {chestDissolved && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/90">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.5, ease: "easeOut", delay: 1.0 }}
-            className="pointer-events-none absolute inset-x-8 bottom-[25%] z-30 flex flex-col items-center text-center select-none"
+            transition={{ duration: 1.5 }}
+            className="flex flex-col items-center gap-4 text-center p-6 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl"
           >
-            <p className={`${caveat.className} max-w-xl text-3xl font-bold leading-relaxed text-amber-100/95 md:text-4.5xl drop-shadow-[0_2px_15px_rgba(0,0,0,0.9)]`}>
-              "No matter how many lights shine tonight...
-              you'll always be the brightest one. ❤️"
+            <p className={`${caveat.className} text-4xl font-bold text-amber-200`}>
+              Thank you for unlocking Day 3... 🏰✨
             </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setChestDissolved(false);
+                  setChestOpened(false);
+                  setLetterOpened(false);
+                  setPhase("dashboard");
+                }}
+                className="flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/65 hover:bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition cursor-pointer"
+              >
+                <span>Return to Dashboard</span>
+              </button>
+              <button
+                onClick={() => {
+                  setChestDissolved(false);
+                  setChestOpened(false);
+                  setLetterOpened(false);
+                  playCinematicFrom(1);
+                }}
+                className="flex items-center gap-2 rounded-full border border-amber-400 bg-amber-400/25 px-8 py-3.5 text-amber-300 font-bold transition hover:bg-amber-400 hover:text-black cursor-pointer"
+              >
+                <RefreshCw size={18} />
+                <span>Replay Cinematic</span>
+              </button>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Interactive Chest Secret Section */}
-      <AnimatePresence>
-        {phase === "interactive_chest" && !chestDissolved && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute z-40 flex flex-col items-center gap-6"
-          >
-            {!chestOpened ? (
-              <div className="flex flex-col items-center gap-6">
-                {/* Floating click instruction badge */}
-                <motion.div 
-                  className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-                >
-                  <span className={`${playfair.className} font-bold text-amber-950 text-base tracking-wide flex items-center gap-2`}>
-                    🎁 Open My Little Secret
-                  </span>
-                </motion.div>
-
-                {/* Animated Vintage Treasure Chest */}
-                <button
-                  onClick={() => setChestOpened(true)}
-                  className="relative group cursor-pointer w-48 h-40 hover:scale-105 transition duration-300 focus:outline-none"
-                >
-                  {/* Chest body graphic */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-amber-800 to-amber-950 rounded-2xl border-4 border-amber-900 shadow-2xl flex flex-col justify-end p-1">
-                    {/* Metal bands */}
-                    <div className="absolute left-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                    <div className="absolute right-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                    {/* Keyhole */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-600 flex items-center justify-center">
-                      <div className="w-2 h-4 bg-black rounded" />
-                    </div>
-                  </div>
-                  {/* Lid graphic */}
-                  <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-amber-700 to-amber-800 rounded-t-2xl border-x-4 border-t-4 border-amber-900 flex items-center justify-between px-6 shadow-md transition duration-300 group-hover:-translate-y-1">
-                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <AnimatePresence mode="wait">
-                {!letterOpened ? (
-                  <motion.div
-                    key="crystal"
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center gap-6"
-                  >
-                    {/* Glowing escape magic particles & crystal shape */}
-                    <div className="relative flex items-center justify-center h-48 w-48">
-                      <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
-                      <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
-                      
-                      {/* Floating glowing diamond crystal */}
-                      <motion.div
-                        animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
-                        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-                        onClick={() => setLetterOpened(true)}
-                        className="cursor-pointer relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-yellow-400 shadow-[0_0_35px_rgba(251,191,36,0.85)] border border-amber-100"
-                      >
-                        <Sparkles className="h-10 w-10 text-amber-950 animate-pulse" />
-                      </motion.div>
-                    </div>
-
-                    <button
-                      onClick={() => setLetterOpened(true)}
-                      className="rounded-full bg-white/20 px-8 py-3.5 border border-white/35 backdrop-blur-md hover:bg-white/35 transition-all text-white font-bold"
-                    >
-                      ✨ Read the secret note ✨
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="handwritten-letter"
-                    initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85, y: -40 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                    className="relative max-w-md w-[92vw] rounded-[2rem] border-[3px] border-amber-900/60 bg-[#faf6ea] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.8)] backdrop-blur-sm text-amber-950 flex flex-col gap-6"
-                  >
-                    {/* Retro seal logo */}
-                    <div className="absolute top-4 right-4 text-xs font-bold text-amber-800/40 select-none">
-                      🔒 CONFIDENTIAL
-                    </div>
-
-                    {/* Letter cursive content */}
-                    <div className="overflow-y-auto max-h-[60vh] pr-2">
-                      <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed`}>
-                        {SECRET_MESSAGE}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={triggerStarExplosion}
-                      className="relative overflow-hidden w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition hover:scale-[1.02] active:scale-95 cursor-pointer"
-                    >
-                      Close my secret ❤️
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Dissolved End Screen: Option to Replay */}
-      {chestDissolved && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
-          className="absolute z-40 flex flex-col items-center gap-4 text-center p-6 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl"
-        >
-          <p className={`${caveat.className} text-4xl font-bold text-amber-200`}>
-            Thank you for unlocking Day 3... 🏰✨
-          </p>
-          <button
-            onClick={() => {
-              setTriggerReplay(prev => prev + 1);
-            }}
-            className="flex items-center gap-2 rounded-full border border-amber-400 bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition hover:bg-amber-400 hover:text-black cursor-pointer"
-          >
-            <RefreshCw size={18} />
-            <span>Replay Experience</span>
-          </button>
-        </motion.div>
+        </div>
       )}
+
+      {/* Styled custom scrollbars CSS */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(3, 2, 8, 0.95);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(251, 191, 36, 0.15);
+          border-radius: 9px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(251, 191, 36, 0.35);
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
+        }
+      `}</style>
+
     </div>
   );
 }
