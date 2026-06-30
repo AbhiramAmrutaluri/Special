@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Heart, Sparkles, Volume2, VolumeX, RefreshCw, Play, Square, SkipForward, Mail, Sparkle, CircleDot, Castle, Film, Gift, Milestone } from "lucide-react";
+import { X, Heart, Sparkles, Volume2, VolumeX, ArrowLeft, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Playfair_Display, Caveat } from "next/font/google";
 
@@ -199,7 +199,6 @@ interface BirthdayThreeRevealProps {
 }
 
 type Phase =
-  | "dashboard"
   | "opening"
   | "scene1_breathing"
   | "scene2_blackout"
@@ -287,28 +286,17 @@ interface FloatingSparkle {
   twinkleSpeed: number;
 }
 
-interface SceneCard {
-  id: number;
-  phase: Phase;
-  title: string;
-  desc: string;
-  duration: number;
-  previewBg: string; // Tailwind gradient classes
-  previewIcon: string; // Emoji
-}
-
 export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProps) {
-  const [phase, setPhase] = useState<Phase>("dashboard");
+  const [phase, setPhase] = useState<Phase>("opening");
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [chestOpened, setChestOpened] = useState(false);
   const [letterOpened, setLetterOpened] = useState(false);
   const [chestDissolved, setChestDissolved] = useState(false);
-  const [playbackTime, setPlaybackTime] = useState(0);
-  const [totalPlaybackDuration, setTotalPlaybackDuration] = useState(0);
+  const [audioHintVisible, setAudioHintVisible] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const synthRef = useRef<MountainVillageSynth | null>(null);
-  const phaseRef = useRef<Phase>("dashboard");
+  const phaseRef = useRef<Phase>("opening");
   
   // Custom camera properties
   const cameraRef = useRef({
@@ -330,7 +318,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
   const animationFrameIdRef = useRef<number | null>(null);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
-  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const phaseStartTimeRef = useRef(Date.now());
 
   useEffect(() => {
@@ -338,121 +325,35 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     phaseStartTimeRef.current = Date.now();
   }, [phase]);
 
-  // Audio system cleanup and initial launch
+  // Audio system setup and click listener to override browser autoplay blocks
   useEffect(() => {
     synthRef.current = new MountainVillageSynth();
+
+    const handleFirstClick = () => {
+      if (synthRef.current) {
+        synthRef.current.init();
+        synthRef.current.setMute(false);
+        setMusicEnabled(true);
+      }
+      setAudioHintVisible(false);
+      window.removeEventListener("click", handleFirstClick);
+    };
+
+    window.addEventListener("click", handleFirstClick);
+
+    // Fade out audio hint after 4s anyway
+    const hintTimer = setTimeout(() => {
+      setAudioHintVisible(false);
+    }, 4000);
+
     return () => {
       synthRef.current?.destroy();
+      window.removeEventListener("click", handleFirstClick);
+      clearTimeout(hintTimer);
     };
   }, []);
 
-  const toggleMusic = () => {
-    if (!synthRef.current) return;
-    if (!musicEnabled) {
-      synthRef.current.init();
-      synthRef.current.setMute(false);
-      setMusicEnabled(true);
-    } else {
-      synthRef.current.setMute(true);
-      setMusicEnabled(false);
-    }
-  };
-
-  // 10 cinematic scenes configuration
-  const scenes: SceneCard[] = [
-    {
-      id: 1,
-      phase: "scene1_breathing",
-      title: "VILLAGE ALIVE",
-      desc: "The drone camera slowly flies over the glowing village. House lights and street lamps gently pulse together as if the entire village has a heartbeat.",
-      duration: 6,
-      previewBg: "from-slate-950 via-indigo-950 to-slate-900",
-      previewIcon: "🏡",
-    },
-    {
-      id: 2,
-      phase: "scene2_blackout",
-      title: "SUDDEN BLACKOUT",
-      desc: "Without warning, a complete power cut happens. Everything goes dark instantly. Only the moon and twinkling stars illuminate the quiet rooftops.",
-      duration: 2,
-      previewBg: "from-black via-slate-950 to-black",
-      previewIcon: "⚡",
-    },
-    {
-      id: 3,
-      phase: "scene3_number4",
-      title: "NUMBER 4 FORMS",
-      desc: "One tiny house begins glowing, then another. Street by street, the warm wave of lights travels across the village to form a giant glowing number 4.",
-      duration: 8,
-      previewBg: "from-indigo-950 via-slate-900 to-amber-950/20",
-      previewIcon: "4️⃣",
-    },
-    {
-      id: 4,
-      phase: "scene4_blackout",
-      title: "DARKNESS RETURNS",
-      desc: "Another complete blackout occurs. The village fades back into dark silence, letting only the moonlight and moving clouds watch over the valley.",
-      duration: 2,
-      previewBg: "from-black via-slate-950 to-neutral-950",
-      previewIcon: "🌑",
-    },
-    {
-      id: 5,
-      phase: "scene5_number3",
-      title: "NUMBER 3 FORMS",
-      desc: "The lights awaken again, spreading diagonally in a new direction. All glowing houses together form a magnificent, giant glowing number 3.",
-      duration: 8,
-      previewBg: "from-indigo-950 via-slate-900 to-amber-900/10",
-      previewIcon: "3️⃣",
-    },
-    {
-      id: 6,
-      phase: "scene6_celebration",
-      title: "VILLAGE CELEBRATES",
-      desc: "Suddenly, every single house in the village lights up! Church bells toll, distant fireworks burst in the mountains, and fireflies dance everywhere.",
-      duration: 6,
-      previewBg: "from-purple-950 via-indigo-950 to-pink-950/30",
-      previewIcon: "🎆",
-    },
-    {
-      id: 7,
-      phase: "final_reveal",
-      title: "FINAL REVEAL",
-      desc: "An elegant titles layout slides in: '3 DAYS TO GO - An entire village lit up, just to celebrate the countdown to my Mammoty's birthday.'",
-      duration: 5,
-      previewBg: "from-slate-950 via-rose-950/40 to-slate-950",
-      previewIcon: "✨",
-    },
-    {
-      id: 8,
-      phase: "scene8_one_light",
-      title: "ONE LIGHT REMAINS",
-      desc: "The camera rises further. Every light slowly fades away except for one tiny house, which remains glowing warmly in the night.",
-      duration: 6,
-      previewBg: "from-slate-950 via-indigo-950/70 to-black",
-      previewIcon: "🕯️",
-    },
-    {
-      id: 9,
-      phase: "scene9_quote",
-      title: "EMOTIONAL ENDING",
-      desc: "The camera zooms deep into the single glowing window: 'No matter how many lights shine tonight, you'll always be the brightest one.'",
-      duration: 5,
-      previewBg: "from-[#080210] to-[#040108]",
-      previewIcon: "❤️",
-    },
-    {
-      id: 10,
-      phase: "scene10_fade_moon",
-      title: "FADE TO MOON",
-      desc: "The camera floats upward, panning to center fully on the glowing full moon. The music fades out, ending this dreamlike story.",
-      duration: 3,
-      previewBg: "from-slate-950 via-sky-950/30 to-black",
-      previewIcon: "🌕",
-    },
-  ];
-
-  // Initialize background elements
+  // Generate house array structure and star fields
   const initializeEntities = () => {
     // 1. Stars
     const stars: Star[] = [];
@@ -468,7 +369,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     }
     starsRef.current = stars;
 
-    // 2. Translucent clouds
+    // 2. Clouds
     const clouds: Cloud[] = [];
     for (let i = 0; i < 5; i++) {
       clouds.push({
@@ -529,8 +430,8 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     for (let t = 0; t <= 1; t += 0.08) {
       points4.push({ nx: 0.58 - t * 0.20, ny: 0.30 + t * 0.26 });
     }
-    for (let x = 0.34; x <= 0.70; x += 0.024) {
-      points4.push({ nx: x, ny: 0.56 });
+    for (let x = 0; x <= 0.70; x += 0.024) {
+      if (x >= 0.34) points4.push({ nx: x, ny: 0.56 });
     }
 
     // Digit "3"
@@ -581,7 +482,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     addPoints(points4, "4");
     addPoints(points3, "3");
 
-    // "Mammoty brightest" house
+    // Mammoty brightest house
     const brightestHouse = houses.find(
       h => h.isPart4 && h.isPart3 && Math.hypot(h.nx - 0.58, h.ny - 0.56) < 0.05
     ) || houses[Math.floor(houses.length / 2)];
@@ -601,7 +502,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       churchHouse.sizeMultiplier = 1.8;
     }
 
-    // Fill with background valley houses
+    // Fill valley with neutral houses (placed organically next to digits with no spacing corridor)
     for (let count = 0; count < 130; count++) {
       let valid = false;
       let rx = 0, ry = 0;
@@ -647,11 +548,94 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     housesRef.current = houses;
   };
 
+  // Direct sequence play timeline
+  const runSequenceTimeline = () => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+    fireworksRef.current = [];
+    setChestOpened(false);
+    setLetterOpened(false);
+    setChestDissolved(false);
+
+    const delay = (fn: () => void, ms: number) => {
+      timersRef.current.push(setTimeout(fn, ms));
+    };
+
+    // 0s: Opening pan
+    setPhase("opening");
+
+    // 3.5s: Scene 1 - Breathing Village (6s)
+    delay(() => {
+      setPhase("scene1_breathing");
+    }, 3500);
+
+    // 9.5s: Scene 2 - Sudden Blackout (2s)
+    delay(() => {
+      setPhase("scene2_blackout");
+    }, 9500);
+
+    // 11.5s: Scene 3 - Number 4 Forms (8s)
+    delay(() => {
+      setPhase("scene3_number4");
+    }, 11500);
+
+    // 19.5s: Scene 4 - Darkness Returns (2s)
+    delay(() => {
+      setPhase("scene4_blackout");
+    }, 19500);
+
+    // 21.5s: Scene 5 - Number 3 Forms (8s)
+    delay(() => {
+      setPhase("scene5_number3");
+    }, 21500);
+
+    // 29.5s: Scene 6 - Village Celebrates (6s)
+    delay(() => {
+      setPhase("scene6_celebration");
+      if (synthRef.current) {
+        synthRef.current.playChurchBells();
+      }
+    }, 29500);
+
+    // 35.5s: Scene 7 - Final Reveal titles (5s)
+    delay(() => {
+      setPhase("final_reveal");
+    }, 35500);
+
+    // 40.5s: Scene 8 - One Light Remains (6s)
+    delay(() => {
+      setPhase("scene8_one_light");
+    }, 40500);
+
+    // 46.5s: Scene 9 - Emotional Ending Window Zoom (5s)
+    delay(() => {
+      setPhase("scene9_quote");
+    }, 46500);
+
+    // 51.5s: Scene 10 - Fade to Moon (3s)
+    delay(() => {
+      setPhase("scene10_fade_moon");
+    }, 51500);
+
+    // 54.5s: End sequence - Reveal Interactive Chest Surprise
+    delay(() => {
+      setPhase("interactive_chest");
+    }, 54500);
+  };
+
   useEffect(() => {
     initializeEntities();
+    runSequenceTimeline();
+
+    return () => {
+      timersRef.current.forEach(t => clearTimeout(t));
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+    };
   }, []);
 
-  // Main Canvas Rendering Loop
+  // Canvas loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -670,18 +654,13 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     window.addEventListener("resize", handleResize);
 
     const animationLoop = () => {
-      if (phaseRef.current === "dashboard") {
-        animationFrameIdRef.current = requestAnimationFrame(animationLoop);
-        return;
-      }
-
       const w = window.innerWidth;
       const h = window.innerHeight;
       const tNow = Date.now();
 
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Draw Sky Background Gradient
+      // 1. Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, "#020205");
       skyGrad.addColorStop(0.35, "#0b0c1b");
@@ -690,7 +669,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Stars
+      // 2. Twinkling Stars
       starsRef.current.forEach(star => {
         star.twinklePhase += star.twinkleSpeed;
         const currentAlpha = Math.max(0.1, Math.min(1.0, star.alpha + Math.sin(star.twinklePhase) * 0.35));
@@ -744,7 +723,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.fill();
       });
 
-      // 5. Camera Drone math
+      // 5. Camera translations (cinematic drone)
       const cam = cameraRef.current;
       switch (phaseRef.current) {
         case "opening":
@@ -814,6 +793,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
           cam.targetX = w / 2 - moonX * 4.0;
           cam.targetY = h / 2 - moonY * 4.0;
           break;
+        default:
+          cam.targetScale = 1.00;
+          cam.targetX = 0;
+          cam.targetY = 0;
+          break;
       }
 
       cam.scale += (cam.targetScale - cam.scale) * 0.02;
@@ -859,7 +843,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       midFog.addColorStop(1, "rgba(10, 10, 24, 0.25)");
       drawMountainRange(midMountainHeight, h * 0.52, "#0a0c1b", midFog);
 
-      // 7. Winding River
+      // 7. River and bridge
       ctx.strokeStyle = "rgba(43, 85, 137, 0.35)";
       ctx.lineWidth = 4;
       ctx.shadowBlur = 8;
@@ -875,7 +859,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Stone bridge
       const bx = toScreenX(0.44);
       const by = toScreenY(0.52);
       ctx.fillStyle = "#0c0a1a";
@@ -891,7 +874,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       ctx.lineTo(bx + 20, by - 6);
       ctx.stroke();
 
-      // 8. Pine trees (with soft wind sway bend animation)
+      // 8. Pine trees (with wind sway bend animation)
       const pineTrees = [
         { nx: 0.28, ny: 0.44 }, { nx: 0.32, ny: 0.48 }, { nx: 0.35, ny: 0.41 },
         { nx: 0.65, ny: 0.46 }, { nx: 0.69, ny: 0.41 }, { nx: 0.72, ny: 0.50 },
@@ -902,8 +885,6 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
       pineTrees.forEach(tree => {
         const tx = toScreenX(tree.nx);
         const ty = toScreenY(tree.ny);
-        
-        // Bends the tree tip in a soft wind sway
         const windSway = Math.sin(tNow * 0.0016 + tree.nx * 20) * 1.6;
         
         ctx.beginPath();
@@ -914,7 +895,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ctx.fill();
       });
 
-      // 9. Update & Render Houses
+      // 9. Update & Draw Houses
       const houses = housesRef.current;
       houses.forEach(house => {
         switch (phaseRef.current) {
@@ -972,6 +953,9 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
             break;
           case "scene10_fade_moon":
             house.targetLight = Math.max(0, house.currentLight - 0.02);
+            break;
+          default:
+            house.targetLight = 0.0;
             break;
         }
 
@@ -1184,11 +1168,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
 
       ctx.restore();
 
-      // Fade-out overlay when zooming into the moon in Scene 10
+      // Zoom-to-moon screen fadeout
       if (phaseRef.current === "scene10_fade_moon") {
         const elapsed = tNow - phaseStartTimeRef.current;
         const progress = Math.min(1.0, elapsed / 3000);
-        ctx.fillStyle = `rgba(0, 0, 0, ${progress * 0.92})`;
+        ctx.fillStyle = `rgba(0, 0, 0, ${progress})`;
         ctx.fillRect(0, 0, w, h);
       }
 
@@ -1205,85 +1189,7 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     };
   }, []);
 
-  // Play animation sequence starting from a specific scene card index
-  const playCinematicFrom = (startSceneId: number) => {
-    // Initialize Web Audio context
-    if (synthRef.current) {
-      synthRef.current.init();
-      synthRef.current.setMute(!musicEnabled);
-    }
-
-    timersRef.current.forEach(t => clearTimeout(t));
-    timersRef.current = [];
-    if (playbackTimerRef.current) {
-      clearInterval(playbackTimerRef.current);
-    }
-
-    fireworksRef.current = [];
-    setChestOpened(false);
-    setLetterOpened(false);
-    setChestDissolved(false);
-
-    // Calculate total duration in seconds of remaining slides
-    let totalSecs = 0;
-    for (let i = startSceneId - 1; i < scenes.length; i++) {
-      totalSecs += scenes[i].duration;
-    }
-    setTotalPlaybackDuration(totalSecs);
-    setPlaybackTime(0);
-
-    // Setup active playback timer tick (updates playback bar)
-    const tickInterval = 100; // tick every 100ms
-    let elapsedMs = 0;
-    playbackTimerRef.current = setInterval(() => {
-      elapsedMs += tickInterval;
-      setPlaybackTime(Math.min(totalSecs, elapsedMs / 1000));
-    }, tickInterval);
-
-    // Helper to queue scenes
-    const queueScene = (sceneIndex: number, delayMs: number) => {
-      if (sceneIndex >= scenes.length) {
-        // Playback finished, return to dashboard or show chest
-        timersRef.current.push(
-          setTimeout(() => {
-            if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-            setPhase("interactive_chest");
-          }, delayMs)
-        );
-        return;
-      }
-
-      const scene = scenes[sceneIndex];
-      timersRef.current.push(
-        setTimeout(() => {
-          setPhase(scene.phase);
-          if (scene.phase === "scene6_celebration" && synthRef.current) {
-            synthRef.current.playChurchBells();
-          }
-          queueScene(sceneIndex + 1, scene.duration * 1000);
-        }, delayMs)
-      );
-    };
-
-    // First scene starts immediately
-    const firstScene = scenes[startSceneId - 1];
-    setPhase(firstScene.phase);
-    if (firstScene.phase === "scene6_celebration" && synthRef.current) {
-      synthRef.current.playChurchBells();
-    }
-    queueScene(startSceneId, firstScene.duration * 1000);
-  };
-
-  const stopPlayback = () => {
-    timersRef.current.forEach(t => clearTimeout(t));
-    timersRef.current = [];
-    if (playbackTimerRef.current) {
-      clearInterval(playbackTimerRef.current);
-    }
-    setPhase("dashboard");
-  };
-
-  // Close letter - trigger 180 stars ascent
+  // Closed letter - trigger 180 stars explosion
   const triggerStarExplosion = () => {
     setLetterOpened(false);
     const list: FloatingSparkle[] = [];
@@ -1310,492 +1216,251 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
     }, 1800);
   };
 
-  const isPlaying = phase !== "dashboard" && phase !== "interactive_chest";
-
-  // Active scene card styling in progress bar
-  const activeSceneName = useMemo(() => {
-    const matching = scenes.find(s => s.phase === phase);
-    return matching ? matching.title : "CINEMATIC SHOWCASE";
-  }, [phase]);
+  const isPlaying = phase !== "interactive_chest";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#030208] text-amber-50 custom-scrollbar select-none">
+    <div className="fixed inset-0 z-50 flex flex-col justify-center items-center overflow-hidden bg-black text-amber-50 select-none">
       
-      {/* Cinematic ambient canvas drawn in background */}
+      {/* Cinematic background canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full pointer-events-none z-0" />
 
-      {/* Floating speaker toggle */}
-      <button
-        onClick={toggleMusic}
-        className="absolute right-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/30 bg-black/55 p-3 text-amber-200/90 shadow-[0_0_15px_rgba(251,191,36,0.1)] backdrop-blur-md transition hover:bg-amber-950/20 hover:scale-105 active:scale-95 cursor-pointer"
-      >
-        {musicEnabled ? (
-          <Volume2 className="h-5 w-5 animate-pulse text-amber-300" />
-        ) : (
-          <VolumeX className="h-5 w-5 text-amber-200/50" />
-        )}
-      </button>
-
-      {/* Close button to exit Day 3 */}
-      <button
-        onClick={onClose}
-        className="absolute left-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/30 bg-black/55 p-3 text-amber-200/90 shadow-[0_0_15px_rgba(251,191,36,0.1)] backdrop-blur-md transition hover:bg-amber-950/20 hover:scale-105 active:scale-95 cursor-pointer"
-      >
-        <X className="h-5 w-5" />
-      </button>
-
-      {/* RENDER FULLSCREEN MOVIE PLAYER */}
+      {/* Audio initialization hint overlay (Fades out automatically after 4s or on first click) */}
       <AnimatePresence>
-        {isPlaying && (
+        {audioHintVisible && isPlaying && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 0.8, y: 0 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col justify-between items-center pointer-events-none"
+            transition={{ duration: 1.0 }}
+            className="absolute top-8 z-50 pointer-events-none rounded-full border border-white/10 bg-black/45 px-5 py-2 text-xs font-semibold text-white/80 backdrop-blur-sm"
           >
-            {/* Top black shroud vignette */}
-            <div className="w-full h-24 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-20 pointer-events-auto" />
-
-            {/* Cinematic subtitle subtitles */}
-            <div className="absolute inset-x-8 top-[30%] text-center flex flex-col items-center gap-4">
-              {phase === "opening" && (
-                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 1.0 }} className="max-w-2xl">
-                  <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>Tonight...</h2>
-                  <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>an entire village has a surprise for someone very special... ❤️</h3>
-                </motion.div>
-              )}
-
-              {phase === "final_reveal" && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.0 }} className="p-8 rounded-[2rem] border border-white/10 bg-black/35 backdrop-blur-[2px] shadow-2xl max-w-xl">
-                  <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">✨❤️</span>
-                  <h1 className={`${playfair.className} text-4.5xl font-black md:text-6xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 mt-2`}>3 DAYS TO GO</h1>
-                  <p className={`${caveat.className} mt-4 text-2xl font-bold leading-relaxed text-amber-200/90 md:text-3xl`}>"An entire village lit up... just to celebrate the countdown to my Mammoty's birthday. ❤️"</p>
-                </motion.div>
-              )}
-
-              {phase === "scene9_quote" && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2 }} className="max-w-lg p-5">
-                  <p className={`${caveat.className} text-3.5xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.9)]`}>"No matter how many lights shine tonight... you'll always be the brightest one. ❤️"</p>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Bottom playback details HUD */}
-            <div className="w-full p-8 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col gap-4 pointer-events-auto z-50">
-              <div className="max-w-5xl w-full mx-auto flex flex-col gap-2.5">
-                {/* Progress bar */}
-                <div className="w-full h-1.5 rounded-full bg-amber-900/30 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 transition-all duration-100 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                    style={{ width: `${(playbackTime / totalPlaybackDuration) * 100}%` }}
-                  />
-                </div>
-
-                <div className="flex justify-between items-center text-xs md:text-sm font-semibold tracking-wider text-amber-200/70">
-                  <span className="flex items-center gap-2 text-amber-400">
-                    <Film className="h-4.5 w-4.5 animate-spin-slow" />
-                    <span>PLAYING SLIDE: {activeSceneName}</span>
-                  </span>
-                  <span>
-                    ⏱️ {playbackTime.toFixed(1)}s / {totalPlaybackDuration}s
-                  </span>
-                </div>
-
-                {/* Controller buttons */}
-                <div className="flex justify-between items-center mt-2.5">
-                  <button 
-                    onClick={stopPlayback}
-                    className="rounded-full border border-amber-900/40 bg-black/65 px-5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-900/20 transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Square size={12} fill="currentColor" />
-                    <span>Stop Cinematic</span>
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      // Find next scene
-                      const currentIdx = scenes.findIndex(s => s.phase === phase);
-                      if (currentIdx !== -1 && currentIdx < scenes.length - 1) {
-                        playCinematicFrom(currentIdx + 2);
-                      } else {
-                        setPhase("interactive_chest");
-                      }
-                    }}
-                    className="rounded-full border border-amber-900/40 bg-black/65 px-5 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-900/20 transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>Skip Slide</span>
-                    <SkipForward size={12} fill="currentColor" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            🎵 Tap anywhere to enable night music & bells
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* RENDER THE MAIN SHOWCASE STORYBOARD DASHBOARD */}
-      {phase === "dashboard" && (
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-20 flex flex-col gap-12 items-center">
-          
-          {/* Header Billboard Section */}
-          <div className="text-center flex flex-col items-center gap-4 max-w-4xl border-b border-amber-900/20 pb-10">
-            <span className="text-sm font-black uppercase tracking-widest text-amber-400/90 flex items-center gap-1.5">
-              <Sparkles size={16} className="animate-pulse" />
-              ✨ 3 Days To Go – Village Lights Countdown ✨
-              <Sparkles size={16} className="animate-pulse" />
-            </span>
+      {/* RENDER CINEMATIC TEXT OVERLAYS */}
+      <AnimatePresence>
+        {isPlaying && (
+          <div className="absolute inset-x-8 top-[30%] pointer-events-none z-30 flex flex-col items-center text-center select-none">
             
-            <h1 className={`${playfair.className} text-4.5xl sm:text-6.5xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 drop-shadow-[0_4px_15px_rgba(251,191,36,0.15)] mt-2`}>
-              3 DAYS TO GO
-            </h1>
-
-            <p className={`${caveat.className} text-2xl sm:text-3.5xl text-amber-200/95 font-bold max-w-2xl leading-relaxed`}>
-              "A cinematic story where an entire village comes together for someone truly special. ❤️"
-            </p>
-
-            <p className="text-sm sm:text-base leading-relaxed text-amber-100/60 max-w-3xl font-light">
-              A peaceful night in the mountains. The village is alive with warm lights, streets glowing, church bells silent, wind in the trees, fireflies in the air, and a heart full of love...
-            </p>
-
-            <div className="mt-4 flex flex-col sm:flex-row gap-4 items-center">
-              <button 
-                onClick={() => playCinematicFrom(1)}
-                className="relative overflow-hidden rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-10 py-4 shadow-[0_0_35px_rgba(251,191,36,0.35)] hover:scale-105 active:scale-95 transition-all text-amber-950 font-extrabold flex items-center gap-2 cursor-pointer group"
+            {phase === "opening" && (
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                transition={{ duration: 1.2, ease: "easeOut" }} 
+                className="max-w-2xl"
               >
-                <Play size={16} fill="currentColor" />
-                <span className="tracking-wide text-base">Play Cinematic Story (45s)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 10-Step Storyboard Grid Showcase */}
-          <div className="w-full flex flex-col gap-6">
-            <div className="flex items-center gap-2 border-b border-amber-900/10 pb-3">
-              <Milestone className="h-5 w-5 text-amber-400" />
-              <h2 className={`${playfair.className} text-xl tracking-wider text-amber-200/90 font-bold uppercase`}>
-                The Cinematic Storyboard Sequence
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 w-full">
-              {scenes.map((scene) => (
-                <motion.div
-                  key={scene.id}
-                  onClick={() => playCinematicFrom(scene.id)}
-                  whileHover={{ y: -6, scale: 1.02 }}
-                  className="rounded-2xl border border-amber-900/35 bg-black/45 p-4 flex flex-col justify-between gap-4 cursor-pointer hover:border-amber-400/50 shadow-lg hover:shadow-[0_12px_24px_rgba(251,191,36,0.08)] transition duration-300 group"
-                >
-                  <div className="flex flex-col gap-3">
-                    {/* Scene styled thumbnail preview */}
-                    <div className={`relative h-28 rounded-xl bg-gradient-to-br ${scene.previewBg} border border-amber-900/30 overflow-hidden flex items-center justify-center text-4xl shadow-inner group-hover:border-amber-400/30 transition`}>
-                      {/* Grid background mesh overlay */}
-                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(0,0,0,0.7))] pointer-events-none" />
-                      <span className="relative z-10 filter drop-shadow-md select-none group-hover:scale-110 transition duration-300">{scene.previewIcon}</span>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-400/70">SCENE 0{scene.id}</span>
-                      <h3 className={`${playfair.className} text-sm font-black text-amber-200 uppercase mt-0.5 tracking-wider group-hover:text-amber-300 transition`}>
-                        {scene.title}
-                      </h3>
-                    </div>
-
-                    <p className="text-[11px] leading-relaxed text-amber-100/50 group-hover:text-amber-100/70 transition font-light max-h-20 overflow-hidden text-ellipsis">
-                      {scene.desc}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-between items-center border-t border-amber-900/10 pt-2.5 text-[10px] font-bold text-amber-200/50 group-hover:text-amber-200/80 transition">
-                    <span>🎬 CHAPTER 0{scene.id}</span>
-                    <span className="bg-amber-900/30 px-2 py-0.5 rounded-full text-amber-400">⏱️ {scene.duration}s</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom detail layouts: Final Message, Surprise trigger, Visual parameters */}
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch border-t border-amber-900/20 pt-10">
-            
-            {/* Column 1: Final Message card */}
-            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
-              <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Final Message Presentation</span>
-                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
-                  ✨ 3 DAYS TO GO ✨
+                <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>
+                  Tonight...
+                </h2>
+                <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>
+                  an entire village has a surprise for someone very special... ❤️
                 </h3>
-                <div className="h-[1px] w-full bg-amber-900/10" />
-                <p className={`${caveat.className} text-2.5xl leading-relaxed text-amber-100 font-bold mt-2`}>
+              </motion.div>
+            )}
+
+            {phase === "final_reveal" && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: "easeOut" }} 
+                className="p-8 rounded-[2rem] border border-white/10 bg-black/35 backdrop-blur-[2px] shadow-2xl max-w-xl"
+              >
+                <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">✨❤️</span>
+                <h1 className={`${playfair.className} text-4.5xl font-black md:text-6xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 mt-2`}>
+                  3 DAYS TO GO
+                </h1>
+                <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse mt-2">❤️✨</span>
+                
+                <p className={`${caveat.className} mt-4 text-2.2xl font-bold leading-relaxed text-amber-200/90 md:text-3xl`}>
                   "An entire village lit up...<br/>
                   just to celebrate the countdown<br/>
                   to my Mammoty's birthday. ❤️"
                 </p>
-              </div>
+              </motion.div>
+            )}
 
-              <div className="text-[10px] font-semibold text-amber-200/40">
-                🔒 Custom Countdown Stage Display
-              </div>
-            </div>
-
-            {/* Column 2: Interactive surprise card details */}
-            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
-              <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Interactive Secret surprise</span>
-                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
-                  🎁 Open My Little Secret
-                </h3>
-                <div className="h-[1px] w-full bg-amber-900/10" />
-                
-                {/* 5-step chest icon grid */}
-                <div className="grid grid-cols-5 gap-1.5 mt-2">
-                  {[
-                    { label: "1. Click Open", icon: "🎁" },
-                    { label: "2. Golden Glow", icon: "🌟" },
-                    { label: "3. Letter Rises", icon: "✉️" },
-                    { label: "4. Unfolds", icon: "📜" },
-                    { label: "5. Stars Fly", icon: "✨" }
-                  ].map((step, i) => (
-                    <div key={i} className="flex flex-col items-center text-center p-1 rounded bg-amber-950/20 border border-amber-900/20">
-                      <span className="text-lg">{step.icon}</span>
-                      <span className="text-[8px] leading-tight text-amber-200/50 mt-1 select-none font-semibold">{step.label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <p className="text-[11px] leading-relaxed text-amber-100/50 mt-2 font-light">
-                  A vintage treasure chest opens with golden glow, bringing a floating crystal and handwritten custom message letter. When closed, it converts into a star shower!
-                </p>
-              </div>
-
-              <button
-                onClick={() => setPhase("interactive_chest")}
-                className="w-full rounded-2xl bg-amber-900/20 hover:bg-amber-900/35 border border-amber-700/40 py-3 shadow text-xs font-black uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center justify-center gap-1.5"
+            {phase === "scene9_quote" && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.5, ease: "easeOut", delay: 0.8 }} 
+                className="max-w-lg p-5"
               >
-                <Gift size={14} />
-                <span>Open Secret Chest Surprise</span>
-              </button>
-            </div>
+                <p className={`${caveat.className} text-3.2xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.95)]`}>
+                  "No matter how many lights shine tonight...<br/>
+                  you'll always be the brightest one. ❤️"
+                </p>
+              </motion.div>
+            )}
 
-            {/* Column 3: Background specs list */}
-            <div className="rounded-3xl border border-amber-900/30 bg-black/45 p-6 flex flex-col justify-between gap-5">
-              <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black tracking-widest uppercase text-amber-400/80">Cinematic Specs Checklist</span>
-                <h3 className={`${playfair.className} text-lg font-black text-amber-200 uppercase tracking-wider`}>
-                  Atmospheric FX
-                </h3>
-                <div className="h-[1px] w-full bg-amber-900/10" />
-
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-amber-200/60 mt-1">
-                  {[
-                    "✨ Twinkling stars",
-                    "🌕 Full moon glow",
-                    "☁️ Drifting clouds",
-                    "🌫️ Mountain fog",
-                    "🌲 Pine tree slopes",
-                    "🐝 Living fireflies",
-                    "✨ Golden dust",
-                    "🔔 Church chimes",
-                    "🎥 Drone camera pan",
-                    "🎆 Tiny fireworks"
-                  ].map((fx, i) => (
-                    <div key={i} className="flex items-center gap-1 bg-amber-950/10 border border-amber-900/10 px-2 py-1 rounded">
-                      <span>{fx}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="text-[10px] font-semibold text-amber-200/40 flex justify-between items-center">
-                <span>⚡ GPU ACCELERATED 60 FPS</span>
-                <span>🏰 PIXAR STYLE</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Technology Specifications bottom footer banner */}
-          <div className="w-full rounded-3xl border border-amber-900/20 bg-black/25 p-5 text-center flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-amber-200/50">
-            <span className="flex items-center gap-1">
-              <CircleDot size={12} className="text-amber-400" />
-              <span>Next.js App Router + TypeScript + Tailwind CSS + Framer Motion</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <Castle size={12} className="text-amber-400" />
-              <span>Disney/Pixar cinematic countdown page presentation</span>
-            </span>
-          </div>
-
-        </div>
-      )}
-
-      {/* RENDER THE CHEST MODAL DIRECTLY FROM DASHBOARD STATE */}
-      <AnimatePresence>
-        {phase === "interactive_chest" && !chestDissolved && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/85 backdrop-blur-md">
-            
-            {/* Close button to return to dashboard */}
-            <button
-              onClick={() => setPhase("dashboard")}
-              className="absolute right-6 top-6 z-50 flex items-center justify-center rounded-full border border-amber-900/35 bg-black/45 p-3 text-white/90 transition hover:bg-white/10 active:scale-95 cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col items-center gap-6"
-            >
-              {!chestOpened ? (
-                <div className="flex flex-col items-center gap-6">
-                  <motion.div 
-                    className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
-                    animate={{ y: [0, -6, 0] }}
-                    transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-                  >
-                    <span className={`${playfair.className} font-bold text-amber-950 text-base tracking-wide flex items-center gap-2`}>
-                      🎁 Open My Little Secret
-                    </span>
-                  </motion.div>
-
-                  <button
-                    onClick={() => setChestOpened(true)}
-                    className="relative group cursor-pointer w-48 h-40 hover:scale-105 transition duration-300 focus:outline-none"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-b from-amber-800 to-amber-950 rounded-2xl border-4 border-amber-900 shadow-2xl flex flex-col justify-end p-1">
-                      <div className="absolute left-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                      <div className="absolute right-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-600 flex items-center justify-center">
-                        <div className="w-2 h-4 bg-black rounded" />
-                      </div>
-                    </div>
-                    <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-amber-700 to-amber-800 rounded-t-2xl border-x-4 border-t-4 border-amber-900 flex items-center justify-between px-6 shadow-md transition duration-300 group-hover:-translate-y-1">
-                      <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                      <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                    </div>
-                  </button>
-                </div>
-              ) : (
-                <AnimatePresence mode="wait">
-                  {!letterOpened ? (
-                    <motion.div
-                      key="crystal"
-                      initial={{ opacity: 0, y: 50 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex flex-col items-center gap-6"
-                    >
-                      <div className="relative flex items-center justify-center h-48 w-48">
-                        <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
-                        <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
-                        
-                        <motion.div
-                          animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
-                          transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-                          onClick={() => setLetterOpened(true)}
-                          className="cursor-pointer relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-yellow-400 shadow-[0_0_35px_rgba(251,191,36,0.85)] border border-amber-100"
-                        >
-                          <Sparkles className="h-10 w-10 text-amber-950 animate-pulse" />
-                        </motion.div>
-                      </div>
-
-                      <button
-                        onClick={() => setLetterOpened(true)}
-                        className="rounded-full bg-white/20 px-8 py-3.5 border border-white/35 backdrop-blur-md hover:bg-white/35 transition-all text-white font-bold cursor-pointer"
-                      >
-                        ✨ Read the secret note ✨
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="handwritten-letter"
-                      initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.85, y: -40 }}
-                      transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                      className="relative max-w-md w-[92vw] rounded-[2rem] border-[3px] border-amber-900/60 bg-[#faf6ea] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.8)] text-amber-950 flex flex-col gap-6"
-                    >
-                      <div className="absolute top-4 right-4 text-xs font-bold text-amber-800/40 select-none">
-                        🔒 CONFIDENTIAL
-                      </div>
-
-                      <div className="overflow-y-auto max-h-[60vh] pr-2">
-                        <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed`}>
-                          {SECRET_MESSAGE}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={triggerStarExplosion}
-                        className="relative overflow-hidden w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition hover:scale-[1.02] active:scale-95 cursor-pointer"
-                      >
-                        Close my secret ❤️
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              )}
-            </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Replay and Return to Dashboard option on finished letter closing */}
+      {/* RENDER THE CHEST MODAL AND BACK BUTTON AT THE END OF THE ANIMATION */}
+      <AnimatePresence>
+        {phase === "interactive_chest" && !chestDissolved && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40 bg-black/90 flex flex-col justify-center items-center gap-10"
+          >
+            
+            {/* Wooden chest surprise container */}
+            {!chestOpened ? (
+              <div className="flex flex-col items-center gap-6">
+                <motion.div 
+                  className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+                >
+                  <span className={`${playfair.className} font-bold text-amber-950 text-base tracking-wide flex items-center gap-2`}>
+                    🎁 Open My Little Secret
+                  </span>
+                </motion.div>
+
+                {/* Chest graphics wrapper */}
+                <button
+                  onClick={() => setChestOpened(true)}
+                  className="relative group cursor-pointer w-48 h-40 hover:scale-105 transition duration-300 focus:outline-none"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-amber-800 to-amber-950 rounded-2xl border-4 border-amber-900 shadow-2xl flex flex-col justify-end p-1">
+                    <div className="absolute left-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
+                    <div className="absolute right-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-600 flex items-center justify-center">
+                      <div className="w-2 h-4 bg-black rounded" />
+                    </div>
+                  </div>
+                  <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-amber-700 to-amber-800 rounded-t-2xl border-x-4 border-t-4 border-amber-900 flex items-center justify-between px-6 shadow-md transition duration-300 group-hover:-translate-y-1">
+                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
+                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {!letterOpened ? (
+                  <motion.div
+                    key="crystal"
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center gap-6"
+                  >
+                    <div className="relative flex items-center justify-center h-48 w-48">
+                      <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
+                      <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
+                      
+                      <motion.div
+                        animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
+                        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+                        onClick={() => setLetterOpened(true)}
+                        className="cursor-pointer relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-yellow-400 shadow-[0_0_35px_rgba(251,191,36,0.85)] border border-amber-100"
+                      >
+                        <Sparkles className="h-10 w-10 text-amber-950 animate-pulse" />
+                      </motion.div>
+                    </div>
+
+                    <button
+                      onClick={() => setLetterOpened(true)}
+                      className="rounded-full bg-white/20 px-8 py-3.5 border border-white/35 backdrop-blur-md hover:bg-white/35 transition-all text-white font-bold cursor-pointer"
+                    >
+                      ✨ Read the secret note ✨
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="handwritten-letter"
+                    initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.85, y: -40 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                    className="relative max-w-md w-[92vw] rounded-[2rem] border-[3px] border-amber-900/60 bg-[#faf6ea] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.8)] text-amber-950 flex flex-col gap-6"
+                  >
+                    <div className="absolute top-4 right-4 text-xs font-bold text-amber-800/40 select-none">
+                      🔒 CONFIDENTIAL
+                    </div>
+
+                    <div className="overflow-y-auto max-h-[60vh] pr-2">
+                      <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed`}>
+                        {SECRET_MESSAGE}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={triggerStarExplosion}
+                      className="relative overflow-hidden w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition hover:scale-[1.02] active:scale-95 cursor-pointer"
+                    >
+                      Close my secret ❤️
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Back button (Only visible when letter is not open, to prevent overlapping) */}
+            {!letterOpened && (
+              <motion.button
+                onClick={onClose}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="absolute bottom-12 rounded-full border border-amber-400/40 bg-black/60 hover:bg-amber-400/20 px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center gap-2"
+              >
+                <ArrowLeft size={16} />
+                <span>← Back to Countdown</span>
+              </motion.button>
+            )}
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* End Screen layout visible on finished letter closing */}
       {chestDissolved && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/90">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1.5 }}
-            className="flex flex-col items-center gap-4 text-center p-6 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl"
+            className="flex flex-col items-center gap-6 text-center p-8 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl max-w-md mx-4"
           >
             <p className={`${caveat.className} text-4xl font-bold text-amber-200`}>
               Thank you for unlocking Day 3... 🏰✨
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
               <button
                 onClick={() => {
                   setChestDissolved(false);
                   setChestOpened(false);
                   setLetterOpened(false);
-                  setPhase("dashboard");
+                  setPhase("opening");
+                  runSequenceTimeline();
                 }}
-                className="flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/65 hover:bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 rounded-full border border-amber-400 bg-amber-400/25 px-8 py-3.5 text-amber-300 font-bold transition hover:bg-amber-400 hover:text-black cursor-pointer"
               >
-                <span>Return to Dashboard</span>
-              </button>
-              <button
-                onClick={() => {
-                  setChestDissolved(false);
-                  setChestOpened(false);
-                  setLetterOpened(false);
-                  playCinematicFrom(1);
-                }}
-                className="flex items-center gap-2 rounded-full border border-amber-400 bg-amber-400/25 px-8 py-3.5 text-amber-300 font-bold transition hover:bg-amber-400 hover:text-black cursor-pointer"
-              >
-                <RefreshCw size={18} />
+                <RefreshCw size={16} />
                 <span>Replay Cinematic</span>
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="flex-1 flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-black/65 hover:bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition cursor-pointer"
+              >
+                <span>Back to List</span>
               </button>
             </div>
           </motion.div>
         </div>
       )}
 
-      {/* Styled custom scrollbars CSS */}
+      {/* Global CSS settings */}
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(3, 2, 8, 0.95);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(251, 191, 36, 0.15);
-          border-radius: 9px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(251, 191, 36, 0.35);
-        }
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
