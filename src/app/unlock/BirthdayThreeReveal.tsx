@@ -612,11 +612,11 @@ export default function BirthdayThreeReveal({ onClose }: BirthdayThreeRevealProp
         ry = 0.35 + Math.random() * 0.52;
         tries++;
 
-        const distToDigit = houses.reduce((min, h) => {
+        const distToAnyHouse = houses.reduce((min, h) => {
           return Math.min(min, Math.hypot(h.nx - rx, h.ny - ry));
         }, 1.0);
 
-        if (distToDigit > 0.038) {
+        if (distToAnyHouse > 0.022) {
           valid = true;
         }
       }
