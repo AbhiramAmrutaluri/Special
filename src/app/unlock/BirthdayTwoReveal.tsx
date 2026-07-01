@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowLeft, RefreshCw } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Playfair_Display, Caveat } from "next/font/google";
 
@@ -16,7 +16,7 @@ const caveat = Caveat({
 });
 
 // Custom secret message for Day 2
-const SECRET_MESSAGE = `My Dearest Vedhaa garuuu, ❤️
+const SECRET_MESSAGE = `Oiii Papaaaa, ❤️
 
 They say that some stories don't need words—they simply find each other in the quiet moments of the world, like two swans gliding across a mirror-calm lake. 
 
@@ -61,7 +61,7 @@ class LakeAmbienceSynth {
     this.activeNodes.forEach(node => {
       try {
         (node as any).stop?.();
-      } catch (e) {}
+      } catch (e) { }
     });
     this.activeNodes = [];
     if (this.timer) {
@@ -176,7 +176,7 @@ class LakeAmbienceSynth {
 
       this.activeNodes.push(osc);
       this.activeNodes.push(whiteNoise);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Synthesize tiny, high-frequency water ripple chimes
@@ -220,17 +220,14 @@ interface BirthdayTwoRevealProps {
 type Phase =
   | "opening"
   | "scene1_breathing"
-  | "scene2_blackout"
-  | "scene3_gliding"
-  | "scene4_drawing"
-  | "scene4_blackout"
-  | "scene5_heart"
-  | "scene6_celebration"
-  | "final_reveal"
-  | "scene8_feather"
-  | "scene9_quote"
-  | "scene10_fade_moon"
-  | "interactive_chest";
+  | "scene2_swans_appear"
+  | "scene3_drawing"
+  | "scene4_heart"
+  | "scene5_reveal"
+  | "scene6_feather"
+  | "scene7_ending"
+  | "scene8_fade_moon"
+  | "ended";
 
 interface Star {
   x: number;
@@ -325,9 +322,6 @@ interface WaterRipple {
 export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
   const [phase, setPhase] = useState<Phase>("opening");
   const [musicEnabled, setMusicEnabled] = useState(false);
-  const [chestOpened, setChestOpened] = useState(false);
-  const [letterOpened, setLetterOpened] = useState(false);
-  const [chestDissolved, setChestDissolved] = useState(false);
   const [audioHintVisible, setAudioHintVisible] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -405,19 +399,19 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
     const pts: { nx: number; ny: number }[] = [];
     const pointsCount = 120;
 
-    // Segment 1: Hook circle (from 0 to 65% of the points)
+    // Segment 1: Hook circle (from 0 to 55% of the points)
     const hookCount = Math.floor(pointsCount * 0.55);
     const cx = 0.50;
     const cy = 0.44;
     const r = 0.075;
-    const startAngle = Math.PI * 1.15;
-    const endAngle = -Math.PI * 0.15;
+    const startAngle = Math.PI * 0.85;
+    const endAngle = Math.PI * 2.15;
     for (let i = 0; i < hookCount; i++) {
       const a = startAngle + (i / hookCount) * (endAngle - startAngle);
       pts.push({ nx: cx + r * Math.cos(a), ny: cy + r * Math.sin(a) });
     }
 
-    // Segment 2: Slant line down-left (from 65% to 85% of the points)
+    // Segment 2: Slant line down-left (from 55% to 77% of the points)
     const slantCount = Math.floor(pointsCount * 0.22);
     const startX = cx + r * Math.cos(endAngle);
     const startY = cy + r * Math.sin(endAngle);
@@ -431,7 +425,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
       });
     }
 
-    // Segment 3: Horizontal Base line (from 85% to 100% of the points)
+    // Segment 3: Horizontal Base line (from 77% to 100% of the points)
     const baseCount = pointsCount - hookCount - slantCount;
     const baseEndX = 0.575;
     const baseEndY = 0.62;
@@ -572,60 +566,50 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
     // 0s: Opening - Title and drone glide
     setPhase("opening");
 
-    // 4.5s: Scene 1 - Lake breathes (6s)
+    // 6s: Scene 1 - Lake breathes (6s)
     delay(() => {
       setPhase("scene1_breathing");
-    }, 4500);
+    }, 6000);
 
-    // 10.5s: Scene 2 - First Blackout (2s)
+    // 12s: Scene 2 - Swans Appear & swim naturally (6s)
     delay(() => {
-      setPhase("scene2_blackout");
-    }, 10500);
+      setPhase("scene2_swans_appear");
+    }, 12000);
 
-    // 12.5s: Scene 3 - Swans Glide onto numbers (9.5s)
+    // 18s: Scene 3 - Swan paths trace the number 2 (12s)
     delay(() => {
-      setPhase("scene3_gliding");
-    }, 12500);
+      setPhase("scene3_drawing");
+    }, 18000);
 
-    // 22s: Scene 4 - Swan paths trace the number 2 (10s)
+    // 30s: Scene 4 - Swans meet and form heart in center (8s)
     delay(() => {
-      setPhase("scene4_drawing");
-    }, 22000);
+      setPhase("scene4_heart");
+    }, 30000);
 
-    // 32s: Scene 5 - Swans meet and form heart in center (8s)
+    // 38s: Scene 5 - Countdown Reveal text appears (10s)
     delay(() => {
-      setPhase("scene5_heart");
-    }, 32000);
+      setPhase("scene5_reveal");
+    }, 38000);
 
-    // 40s: Scene 6 - Magical lake sparks rise & fireworks (8s)
+    // 48s: Scene 6 - Falling Feather & expanding sweep ripple (14s)
     delay(() => {
-      setPhase("scene6_celebration");
-    }, 40000);
-
-    // 48s: Scene 7 - Final Reveal display text (8s)
-    delay(() => {
-      setPhase("final_reveal");
+      setPhase("scene6_feather");
     }, 48000);
 
-    // 56s: Scene 8 - Falling Feather (8s)
+    // 62s: Scene 7 - Ending quote appears & swans swim away (8s)
     delay(() => {
-      setPhase("scene8_feather");
-    }, 56000);
+      setPhase("scene7_ending");
+    }, 62000);
 
-    // 64s: Scene 9 - Emotional Quote (6s)
+    // 70s: Scene 8 - Camera rises and zooms into moon, fade to black (6s)
     delay(() => {
-      setPhase("scene9_quote");
-    }, 64000);
-
-    // 70s: Scene 10 - Rise to Moon (4s)
-    delay(() => {
-      setPhase("scene10_fade_moon");
+      setPhase("scene8_fade_moon");
     }, 70000);
 
-    // 74s: Chest Modal Reveal
+    // 76s: Show Back to Countdown button on black screen
     delay(() => {
-      setPhase("interactive_chest");
-    }, 74000);
+      setPhase("ended");
+    }, 76000);
   };
 
   useEffect(() => {
@@ -744,41 +728,31 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           cam.targetY = h * 0.08;
           break;
         case "scene1_breathing":
-          cam.targetScale = 1.05;
+          cam.targetScale = 1.10;
           cam.targetX = 0;
           cam.targetY = 0;
           break;
-        case "scene2_blackout":
+        case "scene2_swans_appear":
           cam.targetScale = 1.02;
           cam.targetX = 0;
-          cam.targetY = h * 0.01;
+          cam.targetY = -h * 0.01;
           break;
-        case "scene3_gliding":
-          cam.targetScale = 0.95;
-          cam.targetX = 0;
-          cam.targetY = -h * 0.02;
-          break;
-        case "scene4_drawing":
+        case "scene3_drawing":
           cam.targetScale = 0.88;
           cam.targetX = 0;
           cam.targetY = -h * 0.06;
           break;
-        case "scene5_heart":
-          cam.targetScale = 1.2;
-          cam.targetX = w / 2 - (w * 0.5) * 1.2;
-          cam.targetY = h / 2 - (h * 0.55) * 1.2;
+        case "scene4_heart":
+          cam.targetScale = 1.30;
+          cam.targetX = w / 2 - (w * 0.5) * 1.30;
+          cam.targetY = h / 2 - (h * 0.375) * 1.30;
           break;
-        case "scene6_celebration":
-          cam.targetScale = 0.95;
-          cam.targetX = 0;
-          cam.targetY = -h * 0.03;
-          break;
-        case "final_reveal":
+        case "scene5_reveal":
           cam.targetScale = 0.90;
           cam.targetX = 0;
           cam.targetY = -h * 0.05;
           break;
-        case "scene8_feather":
+        case "scene6_feather":
           // Follow the feather coordinate
           const fx = toScreenX(featherRef.current.nx);
           const fy = toScreenY(featherRef.current.ny);
@@ -786,12 +760,12 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           cam.targetX = w / 2 - fx * 1.6;
           cam.targetY = h / 2 - fy * 1.6;
           break;
-        case "scene9_quote":
+        case "scene7_ending":
           cam.targetScale = 1.15;
           cam.targetX = 0;
           cam.targetY = -h * 0.02;
           break;
-        case "scene10_fade_moon":
+        case "scene8_fade_moon":
           cam.targetScale = 4.2;
           cam.targetX = w / 2 - moonX * 4.2;
           cam.targetY = h / 2 - moonY * 4.2;
@@ -973,7 +947,6 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         // Lantern body
         ctx.fillStyle = "#0c0d18";
         ctx.fillRect(lx - 3, ly - 6, 6, 8);
-
         ctx.fillStyle = `rgba(251, 146, 60, ${currentGlow})`;
         ctx.shadowBlur = 10 * currentGlow;
         ctx.shadowColor = "rgba(251, 146, 60, 0.9)";
@@ -983,17 +956,17 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
 
       // 10. Draw Wavy/Shimmering Moon reflection path on the water
       const drawMoonpath = () => {
-        if (phaseRef.current === "scene2_blackout" || phaseRef.current === "scene4_blackout") return;
-        
+        if (phaseRef.current === "ended") return;
+
         ctx.fillStyle = "rgba(255, 253, 240, 0.08)";
         ctx.shadowBlur = 12;
         ctx.shadowColor = "rgba(255, 253, 240, 0.25)";
-        
+
         for (let rowY = toScreenY(0.48); rowY < toScreenY(0.95); rowY += 12) {
           const relativeScale = (rowY - toScreenY(0.48)) / baseScale;
           const width = 12 + relativeScale * 180;
           const shift = Math.sin(tNow * 0.0015 + rowY * 0.2) * (3 + relativeScale * 10);
-          
+
           ctx.fillRect(moonX + shift - width * 0.5, rowY, width, 1.5);
         }
         ctx.shadowBlur = 0;
@@ -1016,7 +989,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
       ripplesRef.current = ripplesRef.current.filter(rip => rip.alpha > 0.0);
 
       // Trigger random ripples in the background lake
-      if (Math.random() < 0.015 && phaseRef.current !== "scene2_blackout" && phaseRef.current !== "scene4_blackout") {
+      if (Math.random() < 0.015 && phaseRef.current !== "ended") {
         ripplesRef.current.push({
           nx: 0.15 + Math.random() * 0.7,
           ny: 0.58 + Math.random() * 0.35,
@@ -1027,18 +1000,41 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         });
       }
 
+      // Draw small wooden dock projecting from left shoreline
+      const drawWoodenDock = () => {
+        const dkX = toScreenX(0.28);
+        const dkY = toScreenY(0.72);
+        ctx.save();
+        ctx.fillStyle = "#04050a";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 1.0;
+
+        // Dock pillars
+        ctx.fillRect(dkX - 10, dkY - 2, 4, 18);
+        ctx.fillRect(dkX + 10, dkY - 2, 4, 18);
+        ctx.strokeRect(dkX - 10, dkY - 2, 4, 18);
+        ctx.strokeRect(dkX + 10, dkY - 2, 4, 18);
+
+        // Dock platform
+        ctx.fillStyle = "#070711";
+        ctx.fillRect(dkX - 18, dkY - 4, 36, 4);
+        ctx.strokeRect(dkX - 18, dkY - 4, 36, 4);
+        ctx.restore();
+      };
+      drawWoodenDock();
+
       // 12. Swan state machine glide and painting curves
       const s1 = swan1Ref.current;
       const s2 = swan2Ref.current;
 
       const updateSwans = () => {
-        if (phaseRef.current === "opening" || phaseRef.current === "scene1_breathing" || phaseRef.current === "scene2_blackout") {
+        if (phaseRef.current === "opening" || phaseRef.current === "scene1_breathing" || phaseRef.current === "ended") {
           return; // Wait
         }
 
-        // Glide onto paths in Scene 3 (yesterday)
-        if (phaseRef.current === "scene3_gliding") {
-          const speed = 0.004;
+        // Glide onto paths in Scene 2
+        if (phaseRef.current === "scene2_swans_appear") {
+          const speed = 0.015;
           s1.nx += (points2[0].nx - s1.nx) * speed;
           s1.ny += (points2[0].ny - s1.ny) * speed;
           s1.currentAngle = Math.atan2(points2[0].ny - s1.ny, points2[0].nx - s1.nx);
@@ -1048,10 +1044,10 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           s2.currentAngle = Math.atan2(points2[points2.length - 1].ny - s2.ny, points2[points2.length - 1].nx - s2.nx);
         }
 
-        // Draw "2" trails in Scene 4
-        else if (phaseRef.current === "scene4_drawing") {
+        // Draw "2" trails in Scene 3
+        else if (phaseRef.current === "scene3_drawing") {
           const elapsed = tNow - phaseStartTimeRef.current;
-          const progress = Math.min(1.0, elapsed / 8500); // 8.5 seconds to trace
+          const progress = Math.min(1.0, elapsed / 10500); // 10.5 seconds to trace
 
           // Swan 1 traces the upper curve (indices 0 to 82)
           const targetIndex1 = Math.floor(progress * 82);
@@ -1081,12 +1077,12 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           }
         }
 
-        // Meet in the center to form a heart in Scene 5
-        else if (phaseRef.current === "scene5_heart") {
-          const centerLX = 0.472;
-          const centerLY = 0.54;
-          const centerRX = 0.528;
-          const centerRY = 0.54;
+        // Meet in the center to form a heart in Scene 4, 5, 6 (until feather lands)
+        else if (phaseRef.current === "scene4_heart" || phaseRef.current === "scene5_reveal" || (phaseRef.current === "scene6_feather" && !featherRef.current.landed)) {
+          const centerLX = 0.49;
+          const centerLY = 0.375;
+          const centerRX = 0.51;
+          const centerRY = 0.375;
 
           const speed = 0.024;
           s1.nx += (centerLX - s1.nx) * speed;
@@ -1098,8 +1094,8 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           s2.currentAngle = Math.atan2(centerRY - s2.ny, centerRX - s2.nx);
         }
 
-        // Scene 8 & 9: swim away gracefully
-        else if (phaseRef.current === "scene8_feather" || phaseRef.current === "scene9_quote" || phaseRef.current === "scene10_fade_moon") {
+        // Scene 6 (after landing), 7 (ending) & 8 (fade_moon): swim away gracefully
+        else if (phaseRef.current === "scene7_ending" || phaseRef.current === "scene8_fade_moon" || (phaseRef.current === "scene6_feather" && featherRef.current.landed)) {
           const speed = 0.0035;
           s1.nx -= speed * 0.6;
           s1.ny += speed * 0.15;
@@ -1114,25 +1110,54 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
 
       // 13. Draw the swan coordinates glowing curves trails (Golden light trails)
       const drawSwanTrails = () => {
-        if (phaseRef.current === "opening" || phaseRef.current === "scene1_breathing" || phaseRef.current === "scene2_blackout" || phaseRef.current === "scene4_blackout") {
+        if (phaseRef.current === "opening" || phaseRef.current === "scene1_breathing" || phaseRef.current === "scene2_swans_appear") {
           return;
+        }
+
+        // Draw a very soft, faint, blurred continuous curve beneath the shimmering ripples
+        if (trailPointsRef.current.length > 1) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(251, 191, 36, 0.05)";
+          ctx.lineWidth = 4;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "rgba(251, 191, 36, 0.35)";
+          ctx.beginPath();
+          trailPointsRef.current.forEach((pt, idx) => {
+            const px = toScreenX(pt.nx);
+            const py = toScreenY(pt.ny);
+            if (idx === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          ctx.restore();
         }
 
         // Decay or pulse trails
         trailPointsRef.current.forEach(pt => {
-          if (phaseRef.current === "scene8_feather" || phaseRef.current === "scene9_quote") {
-            pt.alpha = Math.max(0.0, pt.alpha - 0.002); // Slowly dissolve
+          if (phaseRef.current === "scene6_feather" || phaseRef.current === "scene7_ending" || phaseRef.current === "scene8_fade_moon") {
+            pt.alpha = Math.max(0.0, pt.alpha - 0.004); // Slowly dissolve
           } else {
             pt.alpha = 0.8 + 0.2 * Math.sin(tNow * 0.002 + pt.nx * 20); // Golden pulse
           }
 
           if (pt.alpha > 0.0) {
-            ctx.fillStyle = `rgba(251, 191, 36, ${pt.alpha * 0.75})`;
-            ctx.shadowBlur = 10 * pt.alpha;
-            ctx.shadowColor = "rgba(251, 191, 36, 0.8)";
-            ctx.beginPath();
-            ctx.arc(toScreenX(pt.nx), toScreenY(pt.ny), 2.2, 0, Math.PI * 2);
-            ctx.fill();
+            const px = toScreenX(pt.nx);
+            const py = toScreenY(pt.ny);
+
+            // Calculate a horizontal stretch width that oscillates to simulate lake shimmer
+            const relativeWidth = 14 * pt.alpha;
+            const width = relativeWidth + Math.sin(tNow * 0.006 + pt.id * 100) * (4 * pt.alpha);
+            const height = 1.2;
+
+            const grad = ctx.createLinearGradient(px - width / 2, py, px + width / 2, py);
+            grad.addColorStop(0, "rgba(251, 191, 36, 0)");
+            grad.addColorStop(0.5, `rgba(251, 191, 36, ${pt.alpha * 0.75})`);
+            grad.addColorStop(1, "rgba(251, 191, 36, 0)");
+
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 5 * pt.alpha;
+            ctx.shadowColor = "rgba(251, 191, 36, 0.55)";
+            ctx.fillRect(px - width / 2, py, width, height);
             ctx.shadowBlur = 0;
           }
         });
@@ -1142,11 +1167,11 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
 
       // 14. Draw Swans (SVG curves / Canvas paths)
       const drawSwan = (sw: { nx: number; ny: number; currentAngle: number }, reverseWing: boolean) => {
-        if (phaseRef.current === "opening" || phaseRef.current === "scene2_blackout") return;
+        if (phaseRef.current === "opening" || phaseRef.current === "ended") return;
 
         const sx = toScreenX(sw.nx);
         const sy = toScreenY(sw.ny);
-        
+
         ctx.save();
         ctx.translate(sx, sy);
         ctx.scale(reverseWing ? -1 : 1, 1);
@@ -1161,8 +1186,8 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         ctx.fill();
 
         // 14A. Neck Heart Curve (if in heart neck-lock phase)
-        const isH = phaseRef.current === "scene5_heart" || phaseRef.current === "scene6_celebration" || phaseRef.current === "final_reveal";
-        
+        const isH = phaseRef.current === "scene4_heart" || phaseRef.current === "scene5_reveal" || (phaseRef.current === "scene6_feather" && !featherRef.current.landed);
+
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2.4;
         ctx.lineCap = "round";
@@ -1241,8 +1266,8 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
       drawSwan(s1, false);
       drawSwan(s2, true);
 
-      // 15. Falling feather logic and ripple-2 expansion in Scene 8
-      if (phaseRef.current === "scene8_feather") {
+      // 15. Falling feather logic and ripple-2 expansion in Scene 6
+      if (phaseRef.current === "scene6_feather") {
         const feather = featherRef.current;
         if (!feather.landed) {
           feather.driftPhase += 0.035;
@@ -1258,7 +1283,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           ctx.save();
           ctx.translate(fX, fY);
           ctx.rotate(feather.angle);
-          
+
           ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
           ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
           ctx.shadowBlur = 8;
@@ -1267,7 +1292,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
           ctx.beginPath();
           ctx.ellipse(0, 0, 7, 2, -Math.PI / 4, 0, Math.PI * 2);
           ctx.fill();
-          
+
           ctx.beginPath();
           ctx.moveTo(-6, 4);
           ctx.quadraticCurveTo(0, 0, 6, -4);
@@ -1287,7 +1312,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
               nx: feather.nx,
               ny: feather.ny,
               radius: 1,
-              maxRadius: 160,
+              maxRadius: 380,
               alpha: 1.0,
               color: "rgba(255, 253, 240, ALPHA)",
             };
@@ -1295,41 +1320,59 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         }
       }
 
-      // Draw expanding feather ripple numbers
+      // Draw expanding feather ripple numbers (sweep intersection glow)
       if (featherRippleRef.current) {
         const rip = featherRippleRef.current;
-        rip.radius += 0.75;
+        rip.radius += 1.45; // slightly faster sweep expansion
         rip.alpha = Math.max(0.0, 1.0 - rip.radius / rip.maxRadius);
 
         if (rip.alpha > 0.0) {
-          const fRX = toScreenX(rip.nx);
-          const fRY = toScreenY(rip.ny);
+          const lX = toScreenX(rip.nx);
+          const lY = toScreenY(rip.ny);
 
-          // Draw expanding golden-moonlight paths forming "2"
+          // Render physical circular ripple line
           ctx.save();
-          ctx.shadowBlur = 15 * rip.alpha;
-          ctx.shadowColor = "rgba(255, 253, 240, 0.8)";
-          ctx.strokeStyle = `rgba(255, 253, 240, ${rip.alpha * 0.7})`;
-          ctx.lineWidth = 2.0;
-
-          // Paint path of 2 scales outward with ripple radius
+          ctx.strokeStyle = `rgba(255, 253, 240, ${rip.alpha * 0.18})`;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          points2.forEach((pt, idx) => {
-            // Translate coordinate offset relative to center of lake
-            const dx = pt.nx - 0.50;
-            const dy = pt.ny - 0.50;
-            
-            // Ripple scale factor
-            const ripScale = 0.85 + (rip.radius / rip.maxRadius) * 0.45;
-            
-            const px = toScreenX(0.50 + dx * ripScale);
-            const py = toScreenY(0.50 + dy * ripScale);
-
-            if (idx === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          });
+          ctx.ellipse(lX, lY, rip.radius * 2.2, rip.radius * 0.75, 0, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
+
+          // Calculate intersection and draw shimmering path of 2
+          points2.forEach((pt, idx) => {
+            const px = toScreenX(pt.nx);
+            const py = toScreenY(pt.ny);
+
+            const dx = px - lX;
+            const dy = py - lY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // If the circular ripple crosses this point, illuminate it
+            if (Math.abs(dist - rip.radius) < 24) {
+              const diffRatio = Math.max(0, 1 - Math.abs(dist - rip.radius) / 24);
+              const pointAlpha = diffRatio * rip.alpha;
+
+              if (pointAlpha > 0.01) {
+                // Draw horizontal shimmering reflection
+                const relativeWidth = 18 * pointAlpha;
+                const width = relativeWidth + Math.sin(tNow * 0.008 + idx * 3) * (5 * pointAlpha);
+                const height = 1.4;
+
+                const grad = ctx.createLinearGradient(px - width / 2, py, px + width / 2, py);
+                grad.addColorStop(0, "rgba(255, 253, 240, 0)");
+                grad.addColorStop(0.5, `rgba(255, 253, 240, ${pointAlpha * 0.90})`);
+                grad.addColorStop(1, "rgba(255, 253, 240, 0)");
+
+                ctx.save();
+                ctx.fillStyle = grad;
+                ctx.shadowBlur = 10 * pointAlpha;
+                ctx.shadowColor = "rgba(255, 253, 240, 0.75)";
+                ctx.fillRect(px - width / 2, py, width, height);
+                ctx.restore();
+              }
+            }
+          });
         } else {
           featherRippleRef.current = null;
         }
@@ -1350,7 +1393,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         ctx.ellipse(0, 2, lSize * 1.5, lSize * 0.6, 0, 0, Math.PI * 1.85);
         ctx.fill();
 
-        if (phaseRef.current !== "scene2_blackout") {
+        if (phaseRef.current !== "ended") {
           // Petals (colored chimes)
           ctx.fillStyle = lot.color;
           ctx.beginPath();
@@ -1369,7 +1412,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         f.y += f.vy;
         f.vx += (Math.random() - 0.5) * 0.0001;
         f.vy += (Math.random() - 0.5) * 0.0001;
-        
+
         if (f.x < 0) f.x = 1.0;
         if (f.x > 1.0) f.x = 0;
         if (f.y < 0.45) f.y = 0.95;
@@ -1408,63 +1451,10 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         ctx.shadowBlur = 0;
       });
 
-      // 19. Fireworks (Scene 6)
-      if (phaseRef.current === "scene6_celebration") {
-        if (Math.random() < 0.038 && fireworksRef.current.length < 5) {
-          const fx = 0.2 + Math.random() * 0.6;
-          const fy = 0.2 + Math.random() * 0.22;
-          const colors = ["rgba(244, 63, 94, ", "rgba(168, 85, 247, ", "rgba(251, 191, 36, ", "rgba(20, 184, 166, ", "rgba(255, 255, 255, "];
-          const colorPrefix = colors[Math.floor(Math.random() * colors.length)];
-
-          const particles: FireworkParticle[] = [];
-          for (let pCount = 0; pCount < 50; pCount++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 0.001 + Math.random() * 0.0035;
-            particles.push({
-              x: fx,
-              y: fy,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              size: 0.8 + Math.random() * 1.5,
-              alpha: 1.0,
-              color: colorPrefix,
-              fadeSpeed: 0.015 + Math.random() * 0.015,
-              gravity: 0.00004,
-            });
-          }
-
-          fireworksRef.current.push({
-            id: Date.now() + Math.random(),
-            x: fx,
-            y: fy,
-            particles,
-          });
-        }
-      }
-
-      fireworksRef.current.forEach((fw) => {
-        fw.particles.forEach(p => {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += p.gravity;
-          p.alpha -= p.fadeSpeed;
-
-          if (p.alpha > 0.0) {
-            ctx.fillStyle = p.color + p.alpha + ")";
-            ctx.beginPath();
-            ctx.arc(toScreenX(p.x), toScreenY(p.y), p.size, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
-
-        fw.particles = fw.particles.filter(p => p.alpha > 0.0);
-      });
-      fireworksRef.current = fireworksRef.current.filter(fw => fw.particles.length > 0);
-
       ctx.restore();
 
       // Zoom-to-moon screen fadeout
-      if (phaseRef.current === "scene10_fade_moon") {
+      if (phaseRef.current === "scene8_fade_moon") {
         const elapsed = tNow - phaseStartTimeRef.current;
         const progress = Math.min(1.0, elapsed / 4000);
         ctx.fillStyle = `rgba(0, 0, 0, ${progress})`;
@@ -1488,37 +1478,10 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
   const handleSkip = () => {
     timersRef.current.forEach(t => clearTimeout(t));
     timersRef.current = [];
-    setPhase("interactive_chest");
+    setPhase("ended");
   };
 
-  // Closed letter - trigger 180 stars explosion
-  const triggerStarExplosion = () => {
-    setLetterOpened(false);
-    const list: FloatingSparkle[] = [];
-    for (let i = 0; i < 180; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 2.8;
-      
-      list.push({
-        x: 0.5 + (Math.random() - 0.5) * 0.08,
-        y: 0.45 + (Math.random() - 0.5) * 0.12,
-        vx: Math.cos(angle) * speed * 0.002,
-        vy: -0.005 - Math.random() * 0.004,
-        size: 1.2 + Math.random() * 2.4,
-        alpha: 1.0,
-        color: i % 2 === 0 ? "rgba(255, 255, 255, 1.0)" : "rgba(251, 191, 36, 1.0)",
-        twinklePhase: Math.random() * Math.PI * 2,
-        twinkleSpeed: 0.05 + Math.random() * 0.05,
-      });
-    }
-
-    sparklesRef.current = [...sparklesRef.current, ...list];
-    setTimeout(() => {
-      setChestDissolved(true);
-    }, 1800);
-  };
-
-  const isPlaying = phase !== "interactive_chest";
+  const isPlaying = phase !== "ended";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-center items-center overflow-hidden bg-black text-amber-50 select-none">
@@ -1528,7 +1491,7 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
 
       {/* Skip Intro Option */}
       <AnimatePresence>
-        {isPlaying && (
+        {isPlaying && phase !== "scene8_fade_moon" && (
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.65 }}
@@ -1562,56 +1525,56 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
       <AnimatePresence>
         {isPlaying && (
           <div className="absolute inset-x-8 top-[30%] pointer-events-none z-30 flex flex-col items-center text-center select-none">
-            
+
             {phase === "opening" && (
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                transition={{ duration: 1.5, ease: "easeOut" }} 
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
                 className="max-w-2xl"
               >
                 <h2 className={`${playfair.className} text-3xl font-light tracking-wide text-amber-100/90 md:text-5xl leading-relaxed`}>
-                  Some stories...
+                  Some journeys...
                 </h2>
                 <h3 className={`${playfair.className} mt-6 text-2.5xl font-light tracking-wide text-white/90 md:text-4.5xl leading-relaxed`}>
-                  don't need words...<br />they simply find each other. ❤️
+                  don't begin with words...<br />they begin with destiny. ❤️
                 </h3>
               </motion.div>
             )}
 
-            {phase === "final_reveal" && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }} 
-                animate={{ opacity: 1, scale: 1 }} 
+            {phase === "scene5_reveal" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }} 
-                className="p-8 rounded-[2rem] border border-white/10 bg-black/40 backdrop-blur-[2px] shadow-2xl max-w-xl"
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="p-8 rounded-[2rem] border border-white/10 bg-black/45 backdrop-blur-[2px] shadow-2xl max-w-xl flex flex-col items-center gap-4"
               >
                 <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse">🦢🤍</span>
                 <h1 className={`${playfair.className} text-4.5xl font-black md:text-6xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 mt-2`}>
                   2 DAYS TO GO
                 </h1>
                 <span className="text-pink-400 text-2.5xl flex items-center justify-center gap-1.5 animate-pulse mt-2">🤍🦢</span>
-                
+
                 <p className={`${caveat.className} mt-4 text-2.2xl font-bold leading-relaxed text-amber-200/90 md:text-3xl`}>
                   "Only two more sunrises...<br />
-                  until I celebrate<br />
+                  until I finally celebrate<br />
                   my Mammoty's birthday. ❤️"
                 </p>
               </motion.div>
             )}
 
-            {phase === "scene9_quote" && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
+            {phase === "scene7_ending" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.8, ease: "easeOut", delay: 0.8 }} 
+                transition={{ duration: 1.8, ease: "easeOut", delay: 0.8 }}
                 className="max-w-lg p-5"
               >
                 <p className={`${caveat.className} text-3.2xl font-bold leading-relaxed text-amber-100 drop-shadow-[0_2px_15px_rgba(0,0,0,0.95)]`}>
-                  "Some souls were always meant to meet. ❤️"
+                  "Some souls were always meant to find each other. ❤️"
                 </p>
               </motion.div>
             )}
@@ -1620,162 +1583,29 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         )}
       </AnimatePresence>
 
-      {/* RENDER THE CHEST MODAL AND BACK BUTTON AT THE END OF THE ANIMATION */}
+      {/* RENDER BACK BUTTON AT THE END OF THE ANIMATION */}
       <AnimatePresence>
-        {phase === "interactive_chest" && !chestDissolved && (
+        {phase === "ended" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-40 bg-black/90 flex flex-col justify-center items-center gap-10"
+            transition={{ duration: 1.2 }}
+            className="absolute inset-0 z-40 bg-black flex flex-col justify-center items-center gap-6"
           >
-            
-            {/* Wooden chest surprise container */}
-            {!chestOpened ? (
-              <div className="flex flex-col items-center gap-6">
-                <motion.div 
-                  className="rounded-full bg-gradient-to-r from-amber-400/90 to-yellow-500/95 border border-amber-300 px-6 py-2 shadow-2xl"
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-                >
-                  <span className={`${playfair.className} font-bold text-amber-950 text-base tracking-wide flex items-center gap-2`}>
-                    🎁 Open My Little Secret
-                  </span>
-                </motion.div>
-
-                {/* Chest graphics wrapper */}
-                <button
-                  onClick={() => setChestOpened(true)}
-                  className="relative group cursor-pointer w-48 h-40 hover:scale-105 transition duration-300 focus:outline-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-b from-amber-800 to-amber-950 rounded-2xl border-4 border-amber-900 shadow-2xl flex flex-col justify-end p-1">
-                    <div className="absolute left-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                    <div className="absolute right-6 inset-y-0 w-3 bg-yellow-600/90 border-x border-yellow-700/50" />
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-600 flex items-center justify-center">
-                      <div className="w-2 h-4 bg-black rounded" />
-                    </div>
-                  </div>
-                  <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-amber-700 to-amber-800 rounded-t-2xl border-x-4 border-t-4 border-amber-900 flex items-center justify-between px-6 shadow-md transition duration-300 group-hover:-translate-y-1">
-                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                    <div className="w-3 h-full bg-yellow-600/90 border-x border-yellow-700/50" />
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <AnimatePresence mode="wait">
-                {!letterOpened ? (
-                  <motion.div
-                    key="crystal"
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center gap-6"
-                  >
-                    <div className="relative flex items-center justify-center h-48 w-48">
-                      <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/25 blur-xl" />
-                      <div className="absolute h-36 w-36 rounded-full bg-radial-gradient from-amber-300/40 via-yellow-500/10 to-transparent blur-md" />
-                      
-                      <motion.div
-                        animate={{ y: [0, -12, 0], rotate: [0, 15, 0] }}
-                        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-                        onClick={() => setLetterOpened(true)}
-                        className="cursor-pointer relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-yellow-400 shadow-[0_0_35px_rgba(251,191,36,0.85)] border border-amber-100"
-                      >
-                        <Sparkles className="h-10 w-10 text-amber-950 animate-pulse" />
-                      </motion.div>
-                    </div>
-
-                    <button
-                      onClick={() => setLetterOpened(true)}
-                      className="rounded-full bg-white/20 px-8 py-3.5 border border-white/35 backdrop-blur-md hover:bg-white/35 transition-all text-white font-bold cursor-pointer"
-                    >
-                      ✨ Read the secret note ✨
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="handwritten-letter"
-                    initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85, y: -40 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                    className="relative max-w-md w-[92vw] rounded-[2rem] border-[3px] border-amber-900/60 bg-[#faf6ea] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.8)] text-amber-950 flex flex-col gap-6"
-                  >
-                    <div className="absolute top-4 right-4 text-xs font-bold text-amber-800/40 select-none">
-                      🔒 CONFIDENTIAL
-                    </div>
-
-                    <div className="overflow-y-auto max-h-[60vh] pr-2">
-                      <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed`}>
-                        {SECRET_MESSAGE}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={triggerStarExplosion}
-                      className="relative overflow-hidden w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition hover:scale-[1.02] active:scale-95 cursor-pointer"
-                    >
-                      Close my secret ❤️
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            )}
-
-            {/* Back button */}
-            {!letterOpened && (
-              <motion.button
-                onClick={onClose}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="absolute bottom-12 rounded-full border border-amber-400/40 bg-black/60 hover:bg-amber-400/20 px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center gap-2"
-              >
-                <ArrowLeft size={16} />
-                <span>← Back to Countdown</span>
-              </motion.button>
-            )}
-
+            <motion.button
+              onClick={onClose}
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
+              className="rounded-full border border-amber-400/40 bg-black/60 hover:bg-amber-400/20 px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center gap-2"
+            >
+              <ArrowLeft size={16} />
+              <span>← Back to Countdown</span>
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* End Screen layout visible on finished letter closing */}
-      {chestDissolved && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.5 }}
-            className="flex flex-col items-center gap-6 text-center p-8 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl max-w-md mx-4"
-          >
-            <p className={`${caveat.className} text-4xl font-bold text-amber-200`}>
-              Thank you for unlocking Day 2... 🦢🤍
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 w-full">
-              <button
-                onClick={() => {
-                  setChestDissolved(false);
-                  setChestOpened(false);
-                  setLetterOpened(false);
-                  setPhase("opening");
-                  runSequenceTimeline();
-                }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-full border border-amber-400 bg-amber-400/25 px-8 py-3.5 text-amber-300 font-bold transition hover:bg-amber-400 hover:text-black cursor-pointer"
-              >
-                <RefreshCw size={16} />
-                <span>Replay Cinematic</span>
-              </button>
-              
-              <button
-                onClick={onClose}
-                className="flex-1 flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-black/65 hover:bg-amber-400/20 px-8 py-3.5 text-amber-300 font-bold transition cursor-pointer"
-              >
-                <span>Back to List</span>
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* Global CSS settings */}
       <style jsx global>{`
