@@ -1583,26 +1583,41 @@ export default function BirthdayTwoReveal({ onClose }: BirthdayTwoRevealProps) {
         )}
       </AnimatePresence>
 
-      {/* RENDER BACK BUTTON AT THE END OF THE ANIMATION */}
+      {/* RENDER BACK BUTTON AND SECRET MESSAGE AT THE END OF THE ANIMATION */}
       <AnimatePresence>
         {phase === "ended" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1.2 }}
-            className="absolute inset-0 z-40 bg-black flex flex-col justify-center items-center gap-6"
+            className="absolute inset-0 z-45 bg-black flex flex-col justify-center items-center p-6 md:p-12 overflow-y-auto"
           >
-            <motion.button
-              onClick={onClose}
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className="rounded-full border border-amber-400/40 bg-black/60 hover:bg-amber-400/20 px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-amber-300 hover:text-amber-200 transition cursor-pointer flex items-center gap-2"
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="max-w-md w-full rounded-[2rem] border border-amber-900/40 bg-amber-950/20 p-8 shadow-2xl backdrop-blur-md text-amber-50/95 flex flex-col gap-6"
             >
-              <ArrowLeft size={16} />
-              <span>← Back to Countdown</span>
-            </motion.button>
+              <div className="absolute top-4 right-6 text-[10px] font-bold text-amber-600/40 tracking-widest select-none">
+                🔒 CONFIDENTIAL NOTE
+              </div>
+
+              <div className="overflow-y-auto max-h-[50vh] pr-2">
+                <p className={`${caveat.className} whitespace-pre-line text-2.5xl md:text-3xl font-bold leading-relaxed text-amber-100`}>
+                  {SECRET_MESSAGE}
+                </p>
+              </div>
+
+              <motion.button
+                onClick={onClose}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full rounded-2xl bg-gradient-to-r from-amber-800 to-amber-950 py-3.5 shadow-lg border border-amber-900 text-white font-bold tracking-wide transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ArrowLeft size={16} />
+                <span>← Back to Countdown</span>
+              </motion.button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
