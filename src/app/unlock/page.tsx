@@ -14,6 +14,7 @@ import BirthdayFiveReveal from "./BirthdayFiveReveal";
 import BirthdayFourReveal from "./BirthdayFourReveal";
 import BirthdayThreeReveal from "./BirthdayThreeReveal";
 import BirthdayTwoReveal from "./BirthdayTwoReveal";
+import BirthdayOneReveal from "./BirthdayOneReveal";
 
 const caveat = Caveat({
   subsets: ["latin"],
@@ -581,7 +582,8 @@ export default function UnlockPage() {
   const [showFourSurprise, setShowFourSurprise] = useState(false);
   const [showThreeSurprise, setShowThreeSurprise] = useState(false);
   const [showTwoSurprise, setShowTwoSurprise] = useState(false);
-  const showConfetti = isRevealed && !showSurprise && !showSevenSurprise && !showSixSurprise && !showFiveSurprise && !showFourSurprise && !showThreeSurprise && !showTwoSurprise;
+  const [showOneSurprise, setShowOneSurprise] = useState(false);
+  const showConfetti = isRevealed && !showSurprise && !showSevenSurprise && !showSixSurprise && !showFiveSurprise && !showFourSurprise && !showThreeSurprise && !showTwoSurprise && !showOneSurprise;
 
   useEffect(() => {
     if (!isRevealed) return;
@@ -627,8 +629,25 @@ export default function UnlockPage() {
       setIsRevealed(true);
       setShowCollage(true);
       setShowTwoSurprise(true);
+    } else if (day === "1") {
+      setIsRevealed(true);
+      setShowCollage(true);
+      setShowOneSurprise(true);
     }
   }, []);
+
+  if (showOneSurprise) {
+    return (
+      <AnimatePresence mode="wait">
+        <BirthdayOneReveal
+          onClose={() => {
+            setShowOneSurprise(false);
+            router.push("/surprises");
+          }}
+        />
+      </AnimatePresence>
+    );
+  }
 
   if (showTwoSurprise) {
     return (

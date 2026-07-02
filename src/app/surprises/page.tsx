@@ -233,17 +233,17 @@ export default function SurprisesPage() {
             </div>
           </motion.button>
 
-          {/* Day 1 Card (Locked) */}
+          {/* Day 1 Card (Unlocked) */}
           <motion.button
-            onClick={handleLockedClick}
-            className="flex-1 rounded-[2rem] border border-white/40 bg-white/15 opacity-75 hover:opacity-90 p-6 shadow-[0_12px_30px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 text-rose-950 font-bold flex flex-col items-center gap-3 cursor-pointer group"
-            whileHover={{ y: -4, boxShadow: "0px 20px 40px rgba(0,0,0,0.08)" }}
+            onClick={() => router.push("/unlock?day=1")}
+            className="flex-1 rounded-[2rem] border border-white/60 bg-white/30 hover:bg-white/45 p-6 shadow-[0_12px_30px_rgba(236,72,153,0.06)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 text-rose-950 font-bold flex flex-col items-center gap-3 cursor-pointer group"
+            whileHover={{ y: -4, boxShadow: "0px 20px 40px rgba(236,72,153,0.12)" }}
           >
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-200/80 to-slate-300/80 text-slate-500 group-hover:scale-110 transition duration-300 shadow-sm border border-white/40">
-              <span className="text-3xl">🔒</span>
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-200 text-rose-600 group-hover:scale-110 transition duration-300 shadow-sm border border-white/60">
+              <span className="text-3xl">🌅</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-xl font-black text-rose-900/60">Day 1 Surprise</span>
+              <span className="text-xl font-black text-rose-900">Day 1 Surprise</span>
             </div>
           </motion.button>
           
